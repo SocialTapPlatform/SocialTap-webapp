@@ -42,6 +42,11 @@ def is_blocked(viewer_id, sender_id):
     blocked_list = data.get(str(viewer_id), [])
     return str(sender_id) in blocked_list
 
+@app.before_request
+def redirect_to_custom_domain():
+    if request.host == "socialtap-webapp.onrender.com":
+        return redirect("https://socialtap.social/updateapp", code=301)
+
 # Block a user
 def block_user(viewer_id, sender_id):
     data = load_blocked_users()
