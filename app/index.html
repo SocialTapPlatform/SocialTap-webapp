@@ -149,7 +149,9 @@ document.getElementById('createGroupChatBtn').addEventListener('click', () => {
                         </button>
                     </div>
                     <div class="card-body p-0">
-                        <ul class="list-group list-group-flush" id="chatList">
+                       <div id="chatListWrapper" class="scrollable-chat-list">
+                         <ul class="list-group list-group-flush" id="chatList">
+
                             <li class="list-group-item d-flex justify-content-between align-items-center" 
                                 data-chat-id="">
                                 <div>
@@ -177,6 +179,7 @@ document.getElementById('createGroupChatBtn').addEventListener('click', () => {
                             </li>
                             {% endfor %}
                         </ul>
+                      </div>
                     </div>
                 </div>
             </div>
@@ -310,6 +313,21 @@ document.getElementById('createGroupChatBtn').addEventListener('click', () => {
         });
     });
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const chatList = document.getElementById('chatList');
+  const wrapper = document.getElementById('chatListWrapper');
+
+  if (chatList && wrapper) {
+    const chatItems = chatList.querySelectorAll('li');
+    if (chatItems.length <= 7) {
+      wrapper.style.maxHeight = 'none';
+      wrapper.style.overflowY = 'hidden';
+    }
+  }
+});
+</script>
+
       <script>
     const notificationSound = new Audio('/static/sounds/notification.mp3');
 

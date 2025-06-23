@@ -276,3 +276,22 @@ footer a {
 .shake {
   animation: shake 0.3s;
 }
+
+
+.scrollable-chat-list {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+
+.scrollable-chat-list::-webkit-scrollbar {
+  width: 6px;
+}
+.scrollable-chat-list::-webkit-scrollbar-thumb {
+  background-color: rgba(223, 112, 8, 0.884);
+  border-radius: 4px;
+}
+.scrollable-chat-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
