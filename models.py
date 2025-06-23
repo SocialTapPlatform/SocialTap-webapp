@@ -95,3 +95,17 @@ class Message(db.Model):
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     chat_room_id = db.Column(db.Integer, db.ForeignKey('chat_room.id'), nullable=True)
+
+class Report(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    reporter_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    reported_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True)
+    reason = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    build_version = db.Column(db.String(20))  # Optional version tracking
+    resolved = db.Column(db.Boolean, default=False)
+
+    reporter = db.relationship('User', foreign_keys=[reporter_id])
+    reported_user = db.relationship('User', foreign_keys=[reported_user_id])
+    message = db.relationship('Message')

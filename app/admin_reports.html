@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - Reports</title>
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+</head>
+<body>
+<div class="container mt-5">
+    <h1 class="mb-4">User Reports</h1>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <table class="table table-bordered table-hover table-dark">
+        <thead>
+            <tr>
+                <th>Reporter</th>
+                <th>Reported</th>
+                <th>Message</th>
+                <th>Reason</th>
+                <th>Version</th>
+                <th>Status</th>
+                <th>Time</th>
+                <th>Chat</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for report in reports %}
+            <tr>
+                <td>{{ report.reporter.username }}</td>
+                <td>{{ report.reported_user.username }}</td>
+                <td>{{ report.message.content if report.message else 'Deleted' }}</td>
+                <td>{{ report.reason }}</td>
+                <td>{{ report.build_version }}</td>
+                <td>
+                    {% if report.resolved %}
+                        <span class="badge bg-success">Resolved</span>
+                    {% else %}
+                        <span class="badge bg-warning text-dark">Unresolved</span>
+                    {% endif %}
+                </td>
+                <td>{{ report.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                    {% if report.message and report.message.chat_room %}
+                        <span class="text-muted">Chat ID: {{ report.message.chat_room.id }}</span>
+                    {% else %}
+                        <span class="text-muted">N/A</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <form method="POST" action="{{ url_for('resolve_report', report_id=report.id) }}" class="d-inline">
+                        <button class="btn btn-sm btn-outline-info" title="Toggle Resolve">
+                            <i class="bi bi-check-circle"></i>
+                        </button>
+                    </form>
+                    {% if report.message and report.message.chat_room %}
+                    <form method="POST" action="{{ url_for('delete_chat', chat_id=report.message.chat_room.id) }}" class="d-inline">
+                        <button class="btn btn-sm btn-danger" title="Delete Chat" onclick="return confirm('Delete this chat room?');">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

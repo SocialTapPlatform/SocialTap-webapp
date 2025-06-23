@@ -935,3 +935,57 @@ def api_logout():
 @app.route('/banned')
 def banned():
     return render_template('banned.html')
+#report routes
+@app.route('/api/report', methods=['POST'])
+@login_required
+def report_message():
+    data = request.get_json()
+    message_id = data.get('message_id')
+    reason = data.get('reason', '').strip()
+    build_version = data.get('build_version', 'unknown')
+
+    message = Message.query.get_or_404(message_id)
+    reported_user = message.author
+
+    if reported_user.id == current_user.id:
+        return jsonify({'error': 'You cannot report yourself'}), 400
+
+    report = Report(
+        reporter_id=current_user.id,
+        reported_user_id=reported_user.id,
+        message_id=message.id,
+        reason=reason,
+        build_version=build_version
+    )
+    db.session.add(report)
+    db.session.commit()
+
+    return jsonify({'success': True, 'message': 'Report submitted'})
+    @app.route('/admin/reports')
+@login_required
+def view_reports():
+    if not current_user.is_admin():
+        abort(403)
+    reports = Report.query.order_by(Report.timestamp.desc()).all()
+    return render_template('admin_reports.html', reports=reports)
+@app.route('/admin/delete-chat/<int:chat_id>', methods=['POST'])
+@login_required
+def delete_chat(chat_id):
+    if not current_user.is_admin():
+        abort(403)
+    chat = ChatRoom.query.get_or_404(chat_id)
+    db.session.delete(chat)
+    db.session.commit()
+    flash('Chat deleted successfully.', 'success')
+    return redirect(url_for('view_reports'))
+@app.route('/admin/resolve-report/<int:report_id>', methods=['POST'])
+@login_required
+def resolve_report(report_id):
+    if not current_user.is_admin():
+        abort(403)
+    report = Report.query.get_or_404(report_id)
+    report.resolved = not report.resolved
+    db.session.commit()
+    flash(f"Marked report as {'resolved' if report.resolved else 'unresolved'}.", 'info')
+    return redirect(url_for('view_reports'))
+
