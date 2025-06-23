@@ -870,3 +870,13 @@ def api_login():
     except Exception as e:
         logging.error(f"/api/login error: {str(e)}", exc_info=True)
         return jsonify({'error': 'Server error'}), 500
+#logout function because you won't want to be stuck with the same acount
+@app.route('/api/logout', methods=['POST'])
+@login_required
+def api_logout():
+    try:
+        logout_user()
+        return jsonify({'success': True, 'message': 'Logged out successfully'}), 200
+    except Exception as e:
+        logging.error(f"/api/logout error: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Logout failed'}), 500
