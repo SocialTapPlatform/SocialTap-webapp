@@ -3,53 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
   <title>SocialTap</title>
-
-  <!-- App Icons -->
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
-  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-
-  <!-- Bootstrap & Icons -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
+
 <body data-is-admin="{{ current_user.is_admin()|string }}">
   <div class="container-fluid py-4">
-    <!-- Modal: New Chat -->
-    <div class="modal fade" id="newChatModal" tabindex="-1">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">New Chat</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            <div class="mb-3">
-              <label for="chatName" class="form-label">Group Chat Name</label>
-              <input type="text" class="form-control" id="chatName">
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Select Users</label>
-              <div id="userCheckboxList" class="list-group" style="max-height: 200px; overflow-y: auto;">
-                <div class="text-center text-muted p-3">
-                  <small>Loading users...</small>
-                </div>
-              </div>
-            </div>
-            <div class="d-grid gap-2">
-              <button class="btn btn-primary" id="createGroupChatBtn">Create Group Chat</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Main Interface -->
     <div class="row">
-      <!-- Chat Sidebar -->
+      <!-- Sidebar -->
       <div class="col-md-3">
         <div class="card sidebar-card">
           <div class="card-header d-flex justify-content-between align-items-center">
@@ -58,9 +22,9 @@
               <i class="bi bi-plus-lg"></i> New Chat
             </button>
           </div>
-          <div class="card-body p-0 scrollable-chat-list">
+          <div class="card-body p-0">
             <ul class="list-group list-group-flush" id="chatList">
-              <li class="list-group-item" data-chat-id="">
+              <li class="list-group-item {% if not active_chat_id %}active{% endif %}" data-chat-id="">
                 <div>
                   <div class="fw-bold">Global Chat</div>
                   <small class="text-muted">All users</small>
@@ -76,11 +40,6 @@
                     {% endfor %}
                   </small>
                 </div>
-                {% if chat.id != 0 %}
-                <button class="btn btn-danger btn-sm" onclick="deleteChat({{ chat.id }})">
-                  <i class="bi bi-trash"></i> Delete
-                </button>
-                {% endif %}
               </li>
               {% endfor %}
             </ul>
@@ -88,42 +47,44 @@
         </div>
       </div>
 
-      <!-- Chat Content -->
+      <!-- Main Chat Area -->
       <div class="col-md-9">
         <div class="card chat-card">
           <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 id="chatTitle" class="mb-0">
+            <h5 class="mb-0" id="chatTitle">
               {% if active_chat_id %}
                 {{ chat_rooms|selectattr('id', 'equalto', active_chat_id)|first|attr('name') }}
               {% else %}
                 Global Chat
               {% endif %}
             </h5>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 align-items-center">
               <span class="badge bg-success">{{ username }}</span>
-              <a href="{{ url_for('profile') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-person"></i> Profile</a>
+              <a href="{{ url_for('profile') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-person"></i> Profile
+              </a>
               {% if current_user.is_admin() %}
-              <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-shield"></i> Admin</a>
+              <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-shield"></i> Admin
+              </a>
               {% endif %}
-              <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger"><i class="bi bi-box-arrow-right"></i> Logout</a>
-              <button id="soundToggle" class="btn btn-sm btn-outline-secondary">Sound: <span id="soundStatus">On</span></button>
+              <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-box-arrow-right"></i> Logout
+              </a>
             </div>
           </div>
+
           <div class="card-body chat-messages" id="messageContainer">
-            {% for message in messages %}
-            <div class="message">
-              <p>{{ message.content }}</p>
-            </div>
-            {% endfor %}
+            <div class="text-muted text-center">Loading messages...</div>
           </div>
-          <div class="text-center text-muted mb-2">
-            <small>Messages will appear here...</small>
-          </div>
+
           <div class="card-footer">
             <form id="messageForm" class="d-flex gap-2">
               <input type="hidden" id="activeChatId" value="{{ active_chat_id or '' }}">
-              <input type="text" class="form-control" id="messageInput" placeholder="Type a message" required>
-              <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i></button>
+              <input type="text" class="form-control" id="messageInput" placeholder="Type a message..." required>
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-send"></i>
+              </button>
             </form>
           </div>
         </div>
@@ -131,38 +92,85 @@
     </div>
   </div>
 
-  <!-- Footer -->
-  <footer class="py-3 mt-4">
-    <div class="container text-center">
-      <p class="text-muted small">
-        <a href="{{ url_for('privacy_policy') }}" class="text-decoration-none text-muted me-3">Privacy Policy</a>
-        <a href="{{ url_for('terms_of_service') }}" class="text-decoration-none text-muted">Terms of Service</a><br>
-        <a href="/download" class="text-decoration-none text-muted">Download</a><br>
-        <a href="/apidocs" class="text-decoration-none text-muted">API Docs</a>
-      </p>
-      <p class="text-muted small mb-0">&copy; 2025 SocialTap. Protected by the 
-        <a href="https://www.mozilla.org/media/MPL/2.0/index.f75d2927d3c1.txt" class="text-decoration-none text-muted">Mozilla Public License 2</a>
-      </p>
+  <!-- New Chat Modal -->
+  <div class="modal fade" id="newChatModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">New Chat</h5>
+          <button class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Group Chat Name</label>
+            <input type="text" class="form-control" id="chatName" placeholder="Enter a name">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Select Users</label>
+            <div id="userCheckboxList" class="list-group">
+              <div class="text-center text-muted p-3">
+                <small>Loading users...</small>
+              </div>
+            </div>
+          </div>
+          <div class="d-grid">
+            <button class="btn btn-primary" id="createGroupChatBtn">Create Group Chat</button>
+          </div>
+        </div>
+      </div>
     </div>
-  </footer>
+  </div>
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
   <script>
-    document.getElementById('createGroupChatBtn').addEventListener('click', () => {
-      const name = document.getElementById('chatName').value.trim();
-      const selected = [...document.querySelectorAll('#userCheckboxList input:checked')].map(cb => cb.value);
-      if (!name || selected.length === 0) return alert('Fill out name and select users.');
-      fetch('/api/chats/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, user_ids: selected })
-      })
-      .then(res => res.json())
-      .then(data => data.success ? location.reload() : alert(data.error || 'Failed.'));
+    const messageContainer = document.getElementById('messageContainer');
+    const chatId = document.getElementById('activeChatId').value;
+
+    function loadMessages() {
+      fetch(`/messages?chat_id=${chatId}`)
+        .then(res => res.json())
+        .then(messages => {
+          messageContainer.innerHTML = '';
+          messages.forEach(msg => {
+            const div = document.createElement('div');
+            div.className = 'message' + (msg.username === "{{ username }}" ? ' own' : ' other');
+            div.innerHTML = `
+              <div class="message-bubble">${msg.content}</div>
+              <div class="message-meta">${msg.username} • ${msg.timestamp}</div>
+            `;
+            messageContainer.appendChild(div);
+          });
+          messageContainer.scrollTop = messageContainer.scrollHeight;
+        });
+    }
+
+    loadMessages();
+
+    // Sending a message
+    document.getElementById('messageForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const input = document.getElementById('messageInput');
+      const content = input.value.trim();
+      if (!content) return;
+
+      const formData = new FormData();
+      formData.append('message', content);
+      formData.append('chat_id', chatId);
+
+      fetch('/send', { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            input.value = '';
+            loadMessages();
+          } else {
+            alert(data.error || 'Failed to send message.');
+          }
+        });
     });
 
+    // New chat modal user loading
     document.getElementById('newChatModal').addEventListener('shown.bs.modal', () => {
       fetch('/api/users')
         .then(res => res.json())
@@ -170,42 +178,41 @@
           const list = document.getElementById('userCheckboxList');
           list.innerHTML = '';
           users.forEach(user => {
-            list.innerHTML += `
-              <label class="list-group-item">
-                <input class="form-check-input me-1" type="checkbox" value="${user.id}">
-                ${user.username}
-              </label>`;
+            const item = document.createElement('label');
+            item.className = 'list-group-item';
+            item.innerHTML = `
+              <input class="form-check-input me-1" type="checkbox" value="${user.id}" />
+              ${user.username}
+            `;
+            list.appendChild(item);
           });
         });
     });
 
-    function deleteChat(chatId) {
-      fetch(`/api/chats/delete/${chatId}`, {
-        method: 'DELETE',
+    // Chat creation
+    document.getElementById('createGroupChatBtn').addEventListener('click', () => {
+      const name = document.getElementById('chatName').value.trim();
+      const checkboxes = document.querySelectorAll('#userCheckboxList input:checked');
+      const user_ids = Array.from(checkboxes).map(cb => cb.value);
+
+      if (!name || user_ids.length === 0) {
+        alert('Please enter a name and select at least one user.');
+        return;
+      }
+
+      fetch('/api/chats/create', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: {{ current_user.id }} })
+        body: JSON.stringify({ name, user_ids })
       })
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          const li = document.querySelector(`[data-chat-id="${chatId}"]`);
-          if (li) li.remove();
+          location.reload();
         } else {
-          alert(data.error || 'Failed to delete chat.');
+          alert(data.error || 'Error creating chat.');
         }
       });
-    }
-
-    const notificationSound = new Audio('/static/sounds/notification.mp3');
-    let soundEnabled = localStorage.getItem('soundEnabled') ?? 'true';
-    localStorage.setItem('soundEnabled', soundEnabled);
-    const toggleBtn = document.getElementById('soundToggle');
-    const soundStatus = document.getElementById('soundStatus');
-    soundStatus.textContent = soundEnabled === 'true' ? 'On' : 'Off';
-    toggleBtn.addEventListener('click', () => {
-      soundEnabled = soundEnabled === 'true' ? 'false' : 'true';
-      localStorage.setItem('soundEnabled', soundEnabled);
-      soundStatus.textContent = soundEnabled === 'true' ? 'On' : 'Off';
     });
   </script>
 </body>
