@@ -968,7 +968,7 @@ def view_reports():
     return render_template('admin_reports.html', reports=reports)
 @app.route('/admin/delete-chat/<int:chat_id>', methods=['POST'])
 @login_required
-def delete_chat(chat_id):
+def admindc(chat_id):
     if not current_user.is_admin():
         abort(403)
     chat = ChatRoom.query.get_or_404(chat_id)
