@@ -4,192 +4,209 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-  <!-- Apple Web App Meta -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="SocialTap">
-
   <title>SocialTap</title>
 
-  <!-- Favicon and App Icons -->
-  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <!-- App Icons -->
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-  <link rel="apple-touch-startup-image" href="{{ url_for('static', filename='launch.png') }}">
-
-  <!-- more apple stuff -->
   <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
 
-  <!-- Stylesheets -->
-  <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+  <!-- Bootstrap & Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-
 <body data-is-admin="{{ current_user.is_admin()|string }}">
-    <div class="container-fluid py-4">
-        <!-- Chat Interface -->
-        <div class="row">
-            <!-- Sidebar with chat list -->
-            <div class="col-md-3">
-                <div class="card sidebar-card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Chats</h5>
-                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#newChatModal">
-                            <i class="bi bi-plus-lg"></i> New Chat
-                        </button>
-                    </div>
-                    <div class="card-body p-0 scrollable-chat-list">
-                        <ul class="list-group list-group-flush" id="chatList">
-                            <li class="list-group-item d-flex justify-content-between align-items-center" data-chat-id="">
-                                <div>
-                                    <div class="fw-bold">Global Chat</div>
-                                    <small class="text-muted">All users</small>
-                                </div>
-                            </li>
-                            {% for chat in chat_rooms %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center {% if active_chat_id == chat.id %}active{% endif %}" data-chat-id="{{ chat.id }}">
-                                <div>
-                                    <div class="fw-bold">{{ chat.name }}</div>
-                                    <small class="text-muted">
-                                        {% for participant in chat.participants if participant.id != current_user.id %}
-                                            {{ participant.username }}{% if not loop.last %}, {% endif %}
-                                        {% endfor %}
-                                    </small>
-                                </div>
-                                {% if chat.id != 0 %}
-                                <button class="btn btn-danger btn-sm" onclick="deleteChat({{ chat.id }})">
-                                    <i class="bi bi-trash"></i> Delete
-                                </button>
-                                {% endif %}
-                            </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                </div>
+  <div class="container-fluid py-4">
+    <!-- Modal: New Chat -->
+    <div class="modal fade" id="newChatModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">New Chat</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="chatName" class="form-label">Group Chat Name</label>
+              <input type="text" class="form-control" id="chatName">
             </div>
-
-            <!-- Main chat area -->
-            <div class="col-md-9">
-                <div class="card chat-card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0" id="chatTitle">
-                            {% if active_chat_id %}
-                                {{ chat_rooms|selectattr('id', 'equalto', active_chat_id)|first|attr('name') }}
-                            {% else %}
-                                Global Chat
-                            {% endif %}
-                        </h5>
-                        <div class="d-flex gap-2">
-                            <span id="currentUsername" class="d-none">{{ username }}</span>
-                            <span class="badge bg-success">{{ username }}</span>
-                            <a href="{{ url_for('profile') }}" class="btn btn-sm btn-outline-secondary">
-                                <i class="bi bi-person"></i> Profile
-                            </a>
-                            {% if current_user.is_admin() %}
-                            <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-shield"></i> Admin
-                            </a>
-                            {% endif %}
-                            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger">
-                                <i class="bi bi-box-arrow-right"></i> Logout
-                            </a>
-                            <button id="soundToggle" class="btn btn-sm btn-outline-secondary">
-                                Sound: <span id="soundStatus">On</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="card-body chat-messages" id="messageContainer">
-                        {% for message in messages %}
-                        <div class="message {% if message.sender_id == current_user.id %}own{% else %}other{% endif %}">
-                            <p>{{ message.content }}</p>
-                        </div>
-                        {% endfor %}
-                    </div>
-
-                    <div class="text-center text-muted mb-3">
-                        <small>Messages will appear here...</small>
-                    </div>
-
-                    <div class="card-footer">
-                        <form id="messageForm" class="d-flex gap-2">
-                            <input type="hidden" id="activeChatId" value="{{ active_chat_id or '' }}">
-                            <input type="text" class="form-control" id="messageInput" placeholder="Type a message" required>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-send"></i>
-                            </button>
-                        </form>
-                    </div>
+            <div class="mb-3">
+              <label class="form-label">Select Users</label>
+              <div id="userCheckboxList" class="list-group" style="max-height: 200px; overflow-y: auto;">
+                <div class="text-center text-muted p-3">
+                  <small>Loading users...</small>
                 </div>
+              </div>
             </div>
+            <div class="d-grid gap-2">
+              <button class="btn btn-primary" id="createGroupChatBtn">Create Group Chat</button>
+            </div>
+          </div>
         </div>
+      </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="py-3 mt-4">
-        <div class="container text-center">
-            <p class="text-muted small">
-                <a href="{{ url_for('privacy_policy') }}" class="text-decoration-none text-muted me-3">Privacy Policy</a>
-                <a href="{{ url_for('terms_of_service') }}" class="text-decoration-none text-muted">Terms of Service</a><br>
-                <a href="/download" class="text-decoration-none text-muted">Download</a><br>
-                <a href="/apidocs" class="text-decoration-none text-muted">API Docs</a>
-            </p>
-            <p class="text-muted small mb-0">&copy; 2025 SocialTap. All rights reserved, protected by the </p>
-            <a href="https://www.mozilla.org/media/MPL/2.0/index.f75d2927d3c1.txt" class="text-decoration-none text-muted">Mozilla Public License 2</a>
+    <!-- Main Interface -->
+    <div class="row">
+      <!-- Chat Sidebar -->
+      <div class="col-md-3">
+        <div class="card sidebar-card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Chats</h5>
+            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#newChatModal">
+              <i class="bi bi-plus-lg"></i> New Chat
+            </button>
+          </div>
+          <div class="card-body p-0 scrollable-chat-list">
+            <ul class="list-group list-group-flush" id="chatList">
+              <li class="list-group-item" data-chat-id="">
+                <div>
+                  <div class="fw-bold">Global Chat</div>
+                  <small class="text-muted">All users</small>
+                </div>
+              </li>
+              {% for chat in chat_rooms %}
+              <li class="list-group-item {% if active_chat_id == chat.id %}active{% endif %}" data-chat-id="{{ chat.id }}">
+                <div>
+                  <div class="fw-bold">{{ chat.name }}</div>
+                  <small class="text-muted">
+                    {% for participant in chat.participants if participant.id != current_user.id %}
+                      {{ participant.username }}{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                  </small>
+                </div>
+                {% if chat.id != 0 %}
+                <button class="btn btn-danger btn-sm" onclick="deleteChat({{ chat.id }})">
+                  <i class="bi bi-trash"></i> Delete
+                </button>
+                {% endif %}
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
         </div>
-    </footer>
+      </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
-    <script>
+      <!-- Chat Content -->
+      <div class="col-md-9">
+        <div class="card chat-card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 id="chatTitle" class="mb-0">
+              {% if active_chat_id %}
+                {{ chat_rooms|selectattr('id', 'equalto', active_chat_id)|first|attr('name') }}
+              {% else %}
+                Global Chat
+              {% endif %}
+            </h5>
+            <div class="d-flex gap-2">
+              <span class="badge bg-success">{{ username }}</span>
+              <a href="{{ url_for('profile') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-person"></i> Profile</a>
+              {% if current_user.is_admin() %}
+              <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-shield"></i> Admin</a>
+              {% endif %}
+              <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger"><i class="bi bi-box-arrow-right"></i> Logout</a>
+              <button id="soundToggle" class="btn btn-sm btn-outline-secondary">Sound: <span id="soundStatus">On</span></button>
+            </div>
+          </div>
+          <div class="card-body chat-messages" id="messageContainer">
+            {% for message in messages %}
+            <div class="message">
+              <p>{{ message.content }}</p>
+            </div>
+            {% endfor %}
+          </div>
+          <div class="text-center text-muted mb-2">
+            <small>Messages will appear here...</small>
+          </div>
+          <div class="card-footer">
+            <form id="messageForm" class="d-flex gap-2">
+              <input type="hidden" id="activeChatId" value="{{ active_chat_id or '' }}">
+              <input type="text" class="form-control" id="messageInput" placeholder="Type a message" required>
+              <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i></button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="py-3 mt-4">
+    <div class="container text-center">
+      <p class="text-muted small">
+        <a href="{{ url_for('privacy_policy') }}" class="text-decoration-none text-muted me-3">Privacy Policy</a>
+        <a href="{{ url_for('terms_of_service') }}" class="text-decoration-none text-muted">Terms of Service</a><br>
+        <a href="/download" class="text-decoration-none text-muted">Download</a><br>
+        <a href="/apidocs" class="text-decoration-none text-muted">API Docs</a>
+      </p>
+      <p class="text-muted small mb-0">&copy; 2025 SocialTap. Protected by the 
+        <a href="https://www.mozilla.org/media/MPL/2.0/index.f75d2927d3c1.txt" class="text-decoration-none text-muted">Mozilla Public License 2</a>
+      </p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+  <script>
+    document.getElementById('createGroupChatBtn').addEventListener('click', () => {
+      const name = document.getElementById('chatName').value.trim();
+      const selected = [...document.querySelectorAll('#userCheckboxList input:checked')].map(cb => cb.value);
+      if (!name || selected.length === 0) return alert('Fill out name and select users.');
+      fetch('/api/chats/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, user_ids: selected })
+      })
+      .then(res => res.json())
+      .then(data => data.success ? location.reload() : alert(data.error || 'Failed.'));
+    });
+
+    document.getElementById('newChatModal').addEventListener('shown.bs.modal', () => {
+      fetch('/api/users')
+        .then(res => res.json())
+        .then(users => {
+          const list = document.getElementById('userCheckboxList');
+          list.innerHTML = '';
+          users.forEach(user => {
+            list.innerHTML += `
+              <label class="list-group-item">
+                <input class="form-check-input me-1" type="checkbox" value="${user.id}">
+                ${user.username}
+              </label>`;
+          });
+        });
+    });
+
+    function deleteChat(chatId) {
+      fetch(`/api/chats/delete/${chatId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: {{ current_user.id }} })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          const li = document.querySelector(`[data-chat-id="${chatId}"]`);
+          if (li) li.remove();
+        } else {
+          alert(data.error || 'Failed to delete chat.');
+        }
+      });
+    }
+
     const notificationSound = new Audio('/static/sounds/notification.mp3');
-
-    let soundEnabled = localStorage.getItem('soundEnabled');
-    if (soundEnabled === null) soundEnabled = 'true';
+    let soundEnabled = localStorage.getItem('soundEnabled') ?? 'true';
     localStorage.setItem('soundEnabled', soundEnabled);
-
     const toggleBtn = document.getElementById('soundToggle');
     const soundStatus = document.getElementById('soundStatus');
     soundStatus.textContent = soundEnabled === 'true' ? 'On' : 'Off';
-
     toggleBtn.addEventListener('click', () => {
       soundEnabled = soundEnabled === 'true' ? 'false' : 'true';
       localStorage.setItem('soundEnabled', soundEnabled);
       soundStatus.textContent = soundEnabled === 'true' ? 'On' : 'Off';
     });
-
-    function deleteChat(chatId) {
-        const userId = {{ current_user.id }};
-        fetch(`/api/chats/delete/${chatId}`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Chat deleted successfully.');
-                const chatItem = document.querySelector(`[data-chat-id="${chatId}"]`);
-                if (chatItem) {
-                    chatItem.remove();
-                }
-            } else {
-                alert(data.error);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while deleting the chat.');
-        });
-    }
-    </script>
-
-    <div id="epilepsyWarning" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); color: white; z-index: 9999; align-items: center; justify-content: center; flex-direction: column; font-size: 1.5em; text-align: center;">
-        <p>Epilepsy Warning!</p>
-        <p>This effect may cause discomfort or seizures.</p>
-        <button id="cancelEffectBtn" style="font-size: 1.2em; padding: 1em; margin-top: 1em;">
-            Click now if you are sensitive to epilepsy (<span id="countdown">4</span>)
-        </button>
-    </div>
+  </script>
 </body>
 </html>
