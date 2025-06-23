@@ -840,3 +840,30 @@ def unblock_user_route(user_id):
 def update_app():
     return render_template("updateapp.html")
 
+#login stuff for api
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.get_json() or request.form
+
+    email = data.get('email') or data.get('username')  # support both
+    password = data.get('password')
+
+    if not email or not password:
+        return jsonify({'error': 'Email and password are required'}), 400
+
+    try:
+       
+        user = User.query.filter_by(email=email).first()
+
+        if user and user.check_password(password):
+            login_user(user)
+            return jsonify({
+                'success': True,
+                'username': user.username,
+                'user_id': user.id
+            })
+        else:
+            return jsonify({'error': 'Invalid credentials'}), 401
+    except Exception as e:
+        logging.error(f"/api/login error: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Server error'}), 500
