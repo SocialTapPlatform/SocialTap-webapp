@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SocialTap - Banned</title>
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" />
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" />
+</head>
+<body>
+    <div class="container text-center py-5">
+        <img src="{{ url_for('static', filename='images/socialtaprounded.png') }}" alt="SocialTap Logo" class="mb-4" style="max-width: 200px; height: auto;" />
+        <h1 class="display-4">Account Banned</h1>
+        <p class="lead mt-3">
+            Your account has been banned due to violations of our terms of service/rules.<br />
+            If you believe this is a mistake, please contact support.
+	    Trying to create a new account may result in both accounts being perm deleted without notice.
+        </p>
+        <a href="{{ url_for('logout') }}" class="btn btn-primary mt-4">Logout</a>
+    </div>
+</body>
+</html>

@@ -47,6 +47,19 @@ def redirect_to_custom_domain():
     if request.host == "socialtap-webapp.onrender.com":
         return redirect("https://socialtap.social/updateapp", code=301)
 
+
+@app.before_request
+def check_if_banned():
+    if current_user.is_authenticated and current_user.is_banned:
+        # Allow access to logout or banned page itself to avoid redirect loops
+        allowed_paths = [url_for('logout'), url_for('banned')]
+        if request.path in allowed_paths or request.path.startswith('/static/'):
+            return None
+        
+        if request.path.startswith('/api/'):
+            return "You are banned.", 403
+        
+        return redirect(url_for('banned'))
 # Block a user
 def block_user(viewer_id, sender_id):
     data = load_blocked_users()
@@ -605,6 +618,7 @@ def download_platform(platform):
         return redirect(url_for('download'))
 
 # Admin routes
+
 @app.route('/admin/ban-user/<int:user_id>', methods=['POST'])
 @login_required
 def ban_user(user_id):
@@ -612,18 +626,36 @@ def ban_user(user_id):
         flash('Access denied. Administrative privileges required.', 'danger')
         return redirect(url_for('index'))
     
-    user_to_ban = User.query.get_or_404(user_id)
-    
-    # Don't allow banning yourself or other admins
-    if user_to_ban.id == current_user.id or user_to_ban.is_admin():
-        flash('Cannot ban this user.', 'danger')
+  
+    if user_id == current_user.id:
+        flash('You cannot ban yourself.', 'warning')
+        return redirect(url_for('index'))
+
+    user_to_ban = User.query.get(user_id)
+    if not user_to_ban:
+        flash('User not found.', 'danger')
         return redirect(url_for('index'))
     
-    user_to_ban.is_banned = True
-    db.session.commit()
+    # Prevent banning other admins
+    if user_to_ban.is_admin():
+        flash('You cannot ban another admin.', 'danger')
+        return redirect(url_for('index'))
     
-    flash(f'User {user_to_ban.username} has been banned.', 'success')
-    logging.info(f"Admin {current_user.username} banned user {user_to_ban.username} (ID: {user_to_ban.id})")
+    # Check if already banned
+    if user_to_ban.is_banned:
+        flash(f'User {user_to_ban.username} is already banned.', 'info')
+        return redirect(url_for('index'))
+    
+    try:
+        user_to_ban.is_banned = True
+        db.session.commit()
+        flash(f'User {user_to_ban.username} has been banned successfully.', 'success')
+        logging.info(f"Admin {current_user.username} banned user {user_to_ban.username} (ID: {user_to_ban.id})")
+    except Exception as e:
+        db.session.rollback()
+        flash('An error occurred while banning the user. Please try again.', 'danger')
+        logging.error(f"Error banning user {user_to_ban.username} (ID: {user_to_ban.id}): {e}", exc_info=True)
+    
     return redirect(url_for('index'))
 
 @app.route('/admin/unban-user/<int:user_id>', methods=['POST'])
@@ -633,13 +665,26 @@ def unban_user(user_id):
         flash('Access denied. Administrative privileges required.', 'danger')
         return redirect(url_for('index'))
     
-    user_to_unban = User.query.get_or_404(user_id)
+    user_to_unban = User.query.get(user_id)
+    if not user_to_unban:
+        flash('User not found.', 'danger')
+        return redirect(url_for('index'))
     
-    user_to_unban.is_banned = False
-    db.session.commit()
+    # Only unban if currently banned
+    if not user_to_unban.is_banned:
+        flash(f'User {user_to_unban.username} is not banned.', 'info')
+        return redirect(url_for('index'))
     
-    flash(f'User {user_to_unban.username} has been unbanned.', 'success')
-    logging.info(f"Admin {current_user.username} unbanned user {user_to_unban.username} (ID: {user_to_unban.id})")
+    try:
+        user_to_unban.is_banned = False
+        db.session.commit()
+        flash(f'User {user_to_unban.username} has been unbanned.', 'success')
+        logging.info(f"Admin {current_user.username} unbanned user {user_to_unban.username} (ID: {user_to_unban.id})")
+    except Exception as e:
+        db.session.rollback()
+        flash('An error occurred while unbanning the user. Please try again.', 'danger')
+        logging.error(f"Error unbanning user {user_to_unban.username} (ID: {user_to_unban.id}): {e}", exc_info=True)
+    
     return redirect(url_for('index'))
 
 @app.route('/admin/delete-message/<int:message_id>', methods=['POST'])
@@ -886,3 +931,7 @@ def api_logout():
     except Exception as e:
         logging.error(f"/api/logout error: {str(e)}", exc_info=True)
         return jsonify({'error': 'Logout failed'}), 500
+
+@app.route('/banned')
+def banned():
+    return render_template('banned.html')
