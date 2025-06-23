@@ -959,7 +959,7 @@ def report_message():
 
     return jsonify({'success': True}), 200
 
-    @app.route('/admin/reports')
+@app.route('/admin/reports')
 @login_required
 def view_reports():
     if not current_user.is_admin():
