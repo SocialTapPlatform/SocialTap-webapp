@@ -941,26 +941,24 @@ def banned():
 def report_message():
     data = request.get_json()
     message_id = data.get('message_id')
-    reason = data.get('reason', '').strip()
-    build_version = data.get('build_version', 'unknown')
+    
+    if not message_id:
+        return jsonify({'success': False, 'error': 'No message ID provided'}), 400
 
-    message = Message.query.get_or_404(message_id)
-    reported_user = message.author
+    message = Message.query.get(message_id)
+    if not message:
+        return jsonify({'success': False, 'error': 'Message not found'}), 404
 
-    if reported_user.id == current_user.id:
-        return jsonify({'error': 'You cannot report yourself'}), 400
+    existing_report = Report.query.filter_by(message_id=message.id, reporter_id=current_user.id).first()
+    if existing_report:
+        return jsonify({'success': False, 'error': 'You already reported this message.'}), 409
 
-    report = Report(
-        reporter_id=current_user.id,
-        reported_user_id=reported_user.id,
-        message_id=message.id,
-        reason=reason,
-        build_version=build_version
-    )
+    report = Report(message_id=message.id, reporter_id=current_user.id)
     db.session.add(report)
     db.session.commit()
 
-    return jsonify({'success': True, 'message': 'Report submitted'})
+    return jsonify({'success': True}), 200
+
     @app.route('/admin/reports')
 @login_required
 def view_reports():
