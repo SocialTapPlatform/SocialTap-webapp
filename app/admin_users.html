@@ -159,55 +159,44 @@
             const tableRows = document.querySelectorAll('#userTableBody tr');
             const noResults = document.getElementById('noResults');
             
-           function filterTable() {
-    const rawSearchTerm = searchInput.value.trim().toLowerCase();
-    const statusValue = statusFilter.value;
-    let visibleCount = 0;
-    
-    // Regexes for syntax parsing
-    const idMatch = rawSearchTerm.match(/^id:(\d+)$/);
-    const emailMatch = rawSearchTerm.match(/^email:(.+)$/);
-    const usernameMatch = rawSearchTerm.match(/^username:(.+)$/);
-
-    tableRows.forEach(row => {
-        const username = row.dataset.username;
-        const email = row.dataset.email;
-        const status = row.dataset.status;
-        const id = row.children[0].textContent.trim(); // ID is in first <td>
-        
-        let matchesSearch = false;
-        
-        if (idMatch) {
-            // Search by ID exact match
-            matchesSearch = (id === idMatch[1]);
-        } else if (emailMatch) {
-            // Search by email exact match (case-insensitive)
-            matchesSearch = (email === emailMatch[1].toLowerCase());
-        } else if (usernameMatch) {
-            // Search by username exact match (case-insensitive)
-            matchesSearch = (username === usernameMatch[1].toLowerCase());
-        } else {
-            // Default search: check if username or email contains the search term
-            matchesSearch = username.includes(rawSearchTerm) || email.includes(rawSearchTerm);
-        }
-        
-        const matchesStatus = statusValue === 'all' || status === statusValue;
-        
-        if (matchesSearch && matchesStatus) {
-            row.style.display = '';
-            visibleCount++;
-        } else {
-            row.style.display = 'none';
-        }
-    });
-    
-    if (visibleCount === 0) {
-        noResults.classList.remove('d-none');
-    } else {
-        noResults.classList.add('d-none');
-    }
-}
-
+            function filterTable() {
+                const searchTerm = searchInput.value.toLowerCase();
+                const statusValue = statusFilter.value;
+                let visibleCount = 0;
+                
+                tableRows.forEach(row => {
+                    const username = row.dataset.username;
+                    const email = row.dataset.email;
+                    const status = row.dataset.status;
+                    
+                    const matchesSearch = username.includes(searchTerm) || email.includes(searchTerm);
+                    const matchesStatus = statusValue === 'all' || status === statusValue;
+                    
+                    if (matchesSearch && matchesStatus) {
+                        row.style.display = '';
+                        visibleCount++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+                
+                // Show or hide "no results" message
+                if (visibleCount === 0) {
+                    noResults.classList.remove('d-none');
+                } else {
+                    noResults.classList.add('d-none');
+                }
+            }
+            
+            searchInput.addEventListener('input', filterTable);
+            statusFilter.addEventListener('change', filterTable);
+            
+            resetBtn.addEventListener('click', function() {
+                searchInput.value = '';
+                statusFilter.value = 'all';
+                filterTable();
+            });
+        });
     </script>
 </body>
 </html>
