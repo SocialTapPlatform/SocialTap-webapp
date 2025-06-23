@@ -875,8 +875,14 @@ def api_login():
 @login_required
 def api_logout():
     try:
+        # Mark the user as offline by setting last_seen to >5 minutes ago
+        current_user.last_seen = datetime.utcnow() - timedelta(minutes=10)
+        db.session.commit()
+
+        # Log the user out
         logout_user()
-        return jsonify({'success': True, 'message': 'Logged out successfully'}), 200
+
+        return jsonify({'success': True, 'message': 'Logged out and marked as offline'}), 200
     except Exception as e:
         logging.error(f"/api/logout error: {str(e)}", exc_info=True)
         return jsonify({'error': 'Logout failed'}), 500

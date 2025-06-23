@@ -72,10 +72,10 @@
     </div>
   </div>
 
-  <div class="endpoint">
-  <h5><span class="method text-primary">POST</span> /api/login</h5>
-  <p>Authenticates a user with email and password. Accepts JSON or form-encoded data.</p>
-  <pre><code>{
+      <div class="endpoint">
+      <h5><span class="method text-primary">POST</span> /api/login</h5>
+      <p>Authenticates a user with email and password. Accepts JSON or form-encoded data.</p>
+     <pre><code>{
   "email": "user@example.com",
   "password": "your_password"
 }</code></pre>
@@ -90,9 +90,9 @@
   "error": "Invalid credentials"
 }</code></pre>
 </div>
-<div class="endpoint">
+      <div class="endpoint">
   <h5><span class="method text-primary">POST</span> /api/logout</h5>
-  <p>Logs out the current authenticated user and clears their session.</p>
+  <p>Logs out the current authenticated user and clears their session. It also calls the same thing /api/user/offline does.</p>
   <p><strong>Success Response:</strong></p>
   <pre><code>{
   "success": true,
