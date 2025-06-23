@@ -844,26 +844,29 @@ def update_app():
 @app.route('/api/login', methods=['POST'])
 def api_login():
     data = request.get_json() or request.form
+    input_email = (data.get('email') or data.get('username') or '').strip().lower()
+    input_password = data.get('password')
 
-    email = data.get('email') or data.get('username')  # support both
-    password = data.get('password')
-
-    if not email or not password:
+    if not input_email or not input_password:
         return jsonify({'error': 'Email and password are required'}), 400
 
     try:
-       
-        user = User.query.filter_by(email=email).first()
+        # Loop through all users and compare decrypted email
+        users = User.query.all()
+        for user in users:
+            email = user.email  # this decrypts _email because database is beeg secure
+            if email and email.lower() == input_email:
+                if user.check_password(input_password):
+                    login_user(user)
+                    return jsonify({
+                        'success': True,
+                        'username': user.username,
+                        'user_id': user.id
+                    }), 200
+                else:
+                    break  # matching email but wrong password :()
+        return jsonify({'error': 'Invalid credentials'}), 401
 
-        if user and user.check_password(password):
-            login_user(user)
-            return jsonify({
-                'success': True,
-                'username': user.username,
-                'user_id': user.id
-            })
-        else:
-            return jsonify({'error': 'Invalid credentials'}), 401
     except Exception as e:
         logging.error(f"/api/login error: {str(e)}", exc_info=True)
         return jsonify({'error': 'Server error'}), 500
