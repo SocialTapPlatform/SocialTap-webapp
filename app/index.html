@@ -102,7 +102,8 @@
       <div id="userCheckboxList" style="max-height:200px;overflow-y:auto;"></div>
     </div>
     <div class="modal-footer">
-      <button id="createChatBtn" class="btn btn-primary">Create</button>
+      <button id="createChatBtn" type="button" class="btn btn-primary">Create</button>
+
     </div>
   </div></div>
 </div>
@@ -208,32 +209,61 @@ document.getElementById('soundToggle').onclick=()=>{
   soundStatus.textContent = soundEnabled==='true'?'On':'Off';
 };
 
-/* ─────────────────────────── new-chat modal */
-document.getElementById('newChatModal').addEventListener('shown.bs.modal',()=>{
-  api('/api/users').then(users=>{
-    const list=document.getElementById('userCheckboxList');
-    list.innerHTML='';
-    users.forEach(u=>{
-      list.insertAdjacentHTML('beforeend',`
-        <div>
-          <input type="checkbox" value="${u.id}" class="form-check-input me-2"> ${escapeHTML(u.username)}
-        </div>`);
+<!-- … keep the rest of the script above this line unchanged … -->
+
+/* ──────────── NEW  CHAT (fixed) ──────────── */
+const newChatModalEl = document.getElementById('newChatModal');
+const userListEl     = document.getElementById('userCheckboxList');
+const createBtn      = document.getElementById('createChatBtn');
+const chatNameInput  = document.getElementById('chatName');
+
+// Populate user list each time modal is shown
+newChatModalEl.addEventListener('show.bs.modal', async () => {
+  userListEl.innerHTML = '<div class="text-muted p-2">Loading…</div>';
+  try {
+    const users = await api('/api/users');           // [{id,username}]
+    userListEl.innerHTML = '';
+    users.forEach(u => {
+      userListEl.insertAdjacentHTML('beforeend', `
+        <label class="d-block mb-1">
+          <input type="checkbox" value="${u.id}" class="form-check-input me-2">
+          ${escapeHTML(u.username)}
+        </label>`);
     });
-  });
+  } catch (err) {
+    userListEl.innerHTML = '<div class="text-danger p-2">Failed to load users</div>';
+  }
 });
-document.getElementById('createChatBtn').onclick=()=>{
-  const name=document.getElementById('chatName').value.trim();
-  const ids=[...document.querySelectorAll('#userCheckboxList input:checked')].map(cb=>parseInt(cb.value));
-  if(ids.length===0) return alert('Select at least 1 user');
-  api('/api/chats/create',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({name, user_ids:ids})
-  }).then(j=>{
-    if(j.success) location.href=`/chat/${j.chat.id}`;
-    else alert(j.error||'Error');
-  });
-};
+
+// Create chat on click
+createBtn.addEventListener('click', async () => {
+  const name = chatNameInput.value.trim();
+  const user_ids = [...userListEl.querySelectorAll('input:checked')]
+                   .map(cb => parseInt(cb.value));
+
+  if (user_ids.length === 0) {
+    return alert('Select at least one user to start a chat.');
+  }
+
+  try {
+    const resp = await api('/api/chats/create', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name, user_ids })
+    });
+
+    if (resp.success) {
+      // Close modal then redirect
+      bootstrap.Modal.getInstance(newChatModalEl).hide();
+      window.location.href = `/chat/${resp.chat.id}`;
+    } else {
+      alert(resp.error || 'Error creating chat');
+    }
+  } catch (err) {
+    alert('Network error creating chat');
+  }
+});
+
 
 /* ─────────────────────────── initial + polling */
 loadChats(); loadMessages();
