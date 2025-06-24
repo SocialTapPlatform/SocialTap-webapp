@@ -934,3 +934,8 @@ def api_logout():
 @app.route('/banned')
 def banned():
     return render_template('banned.html')
+
+@app.route('/newchat')
+@login_required
+def newch():
+    return render_template('newchat.html')
