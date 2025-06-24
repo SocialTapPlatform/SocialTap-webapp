@@ -9,25 +9,22 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
   <style>
-    /* --- general colours --- */
     body              { background:#000; color:#fff; }
     .card             { background:#111; border:none; }
     .form-control,
     .btn,
     .list-group-item  { background:#1a1a1a; color:#fff; border:1px solid #333; }
-    .list-group-item:hover          { background:#222; }
+    .list-group-item:hover { background:#222; }
 
-    /* --- chat bubbles --- */
     .chat-messages           { height:60vh; overflow-y:auto; padding:1rem; }
-    .bubble-wrap            { margin-bottom:.9rem; max-width:75%; }
-    .bubble-wrap.own        { margin-left:auto; text-align:right; }
-    .bubble-wrap.other      { margin-right:auto; text-align:left; }
-    .message-bubble         { padding:.7rem 1rem; border-radius:1rem; word-wrap:break-word; }
-    .own .message-bubble    { background:#ff8800; color:#000; }
-    .other .message-bubble  { background:#2a2a2a; color:#ff8800; }
-    .message-meta           { font-size:.75rem; color:#aaa; margin-top:.2rem; }
+    .bubble-wrap             { margin-bottom:.9rem; max-width:75%; }
+    .bubble-wrap.own         { margin-left:auto; text-align:right; }
+    .bubble-wrap.other       { margin-right:auto; text-align:left; }
+    .message-bubble          { padding:.7rem 1rem; border-radius:1rem; word-wrap:break-word; }
+    .own .message-bubble     { background:#ff8800; color:#000; }
+    .other .message-bubble   { background:#2a2a2a; color:#ff8800; }
+    .message-meta            { font-size:.75rem; color:#aaa; margin-top:.2rem; }
 
-    /* mini button tweaks */
     .btn-circle { width:32px;height:32px;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center; }
   </style>
 </head>
@@ -35,22 +32,29 @@
 <body data-is-admin="{{ current_user.is_admin()|string }}">
 <div class="container-fluid py-4">
   <div class="row">
-    <!-- ░▒▓ Sidebar ▓▒░ -->
+    <!-- Sidebar -->
     <div class="col-md-3">
       <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-header">
           <h5 class="mb-0">Chats</h5>
-          <button class="btn btn-sm btn-primary btn-circle" data-bs-toggle="modal" data-bs-target="#newChatModal">
-            <i class="bi bi-plus-lg"></i>
-          </button>
         </div>
         <div class="card-body p-0">
           <ul class="list-group list-group-flush" id="chatList"><!-- filled by JS --></ul>
         </div>
+        <div class="p-3" id="newChatSection">
+          <h6 class="text-white-50 mb-2">Create New Chat</h6>
+          <input id="chatName" class="form-control form-control-sm mb-2" placeholder="Group name (blank = DM)">
+          <div id="userCheckboxList" style="max-height:160px; overflow-y:auto; border:1px solid #333; padding:.5rem; background:#1a1a1a; border-radius:.25rem;">
+            <div class="text-muted small">Loading users…</div>
+          </div>
+          <button id="createChatBtn" type="button" class="btn btn-sm btn-primary w-100 mt-2">
+            <i class="bi bi-check-lg"></i> Create Chat
+          </button>
+        </div>
       </div>
     </div>
 
-    <!-- ░▒▓ Chat panel ▓▒░ -->
+    <!-- Chat panel -->
     <div class="col-md-9 d-flex flex-column">
       <div class="card flex-fill">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -93,46 +97,27 @@
   </div>
 </div>
 
-<!-- ░▒▓ New-chat modal ▓▒░ -->
-<div class="modal fade" id="newChatModal" tabindex="-1">
-  <div class="modal-dialog"><div class="modal-content">
-    <div class="modal-header"><h5 class="modal-title">Create Chat</h5></div>
-    <div class="modal-body">
-      <input id="chatName" class="form-control mb-2" placeholder="Group name (blank = DM)">
-      <div id="userCheckboxList" style="max-height:200px;overflow-y:auto;"></div>
-    </div>
-    <div class="modal-footer">
-      <button id="createChatBtn" type="button" class="btn btn-primary">Create</button>
-
-    </div>
-  </div></div>
-</div>
-
 <audio id="notifSound" src="/static/sounds/notification.mp3" preload="auto"></audio>
 <input type="hidden" id="activeChatId" value="{{ active_chat_id if active_chat_id is not none else '' }}">
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-/* ─────────────────────────── globals */
-const isAdmin        = document.body.dataset.isAdmin === 'True';
-const me             = "{{ username }}";
-let   soundEnabled   = localStorage.getItem('soundEnabled') ?? 'true';
-const soundStatus    = document.getElementById('soundStatus');
-const notifSound     = document.getElementById('notifSound');
-const chatIdField    = document.getElementById('activeChatId');
-let   chatId         = chatIdField.value === '' ? null : Number(chatIdField.value);
-let   lastMsgCount   = 0;
+const isAdmin = document.body.dataset.isAdmin === 'True';
+const me = "{{ username }}";
+let soundEnabled = localStorage.getItem('soundEnabled') ?? 'true';
+const soundStatus = document.getElementById('soundStatus');
+const notifSound = document.getElementById('notifSound');
+const chatIdField = document.getElementById('activeChatId');
+let chatId = chatIdField.value === '' ? null : Number(chatIdField.value);
+let lastMsgCount = 0;
 
-/* ─────────────────────────── helpers */
-function escapeHTML(str){return str.replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
+function escapeHTML(str){return str.replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]);}
 function api(endpoint,opts={}){return fetch(endpoint,opts).then(r=>r.json());}
 
-/* ─────────────────────────── sidebar (chats) */
 async function loadChats(){
-  const chats=await api('/api/chats');   // [{id,name,participants:[{username..}]}]
+  const chats = await api('/api/chats');
   const list = document.getElementById('chatList');
-  list.innerHTML='';
-  // Global chat entry (id 0 or root)
+  list.innerHTML = '';
   list.insertAdjacentHTML('beforeend',`
     <li class="list-group-item d-flex justify-content-between ${chatId===null? 'active':''}">
       <a href="/" class="flex-grow-1 text-reset text-decoration-none">🌐 Global Chat</a>
@@ -148,7 +133,6 @@ async function loadChats(){
       </li>`);
   });
 
-  // attach delete buttons
   document.querySelectorAll('.delete-chat').forEach(btn=>{
     btn.onclick=e=>{
       e.preventDefault();
@@ -163,7 +147,6 @@ async function loadChats(){
   });
 }
 
-/* ─────────────────────────── messages */
 async function loadMessages(){
   const url = chatId===null ? '/messages' : `/messages?chat_id=${chatId}`;
   const msgs = await api(url);
@@ -185,7 +168,6 @@ async function loadMessages(){
   lastMsgCount=msgs.length;
 }
 
-/* ─────────────────────────── send message */
 document.getElementById('messageForm').addEventListener('submit',e=>{
   e.preventDefault();
   const txt = document.getElementById('messageInput');
@@ -201,7 +183,6 @@ document.getElementById('messageForm').addEventListener('submit',e=>{
   });
 });
 
-/* ─────────────────────────── sound toggle */
 soundStatus.textContent = soundEnabled==='true'?'On':'Off';
 document.getElementById('soundToggle').onclick=()=>{
   soundEnabled = soundEnabled==='true'?'false':'true';
@@ -209,66 +190,55 @@ document.getElementById('soundToggle').onclick=()=>{
   soundStatus.textContent = soundEnabled==='true'?'On':'Off';
 };
 
-<!-- … keep the rest of the script above this line unchanged … -->
+/* ─────────── Inline New Chat Panel ─────────── */
+const userListEl = document.getElementById('userCheckboxList');
+const createBtn = document.getElementById('createChatBtn');
+const chatNameInput = document.getElementById('chatName');
 
-/* ──────────── NEW  CHAT (fixed) ──────────── */
-const newChatModalEl = document.getElementById('newChatModal');
-const userListEl     = document.getElementById('userCheckboxList');
-const createBtn      = document.getElementById('createChatBtn');
-const chatNameInput  = document.getElementById('chatName');
-
-// Populate user list each time modal is shown
-newChatModalEl.addEventListener('show.bs.modal', async () => {
-  userListEl.innerHTML = '<div class="text-muted p-2">Loading…</div>';
-  try {
-    const users = await api('/api/users');           // [{id,username}]
-    userListEl.innerHTML = '';
-    users.forEach(u => {
-      userListEl.insertAdjacentHTML('beforeend', `
-        <label class="d-block mb-1">
+(async function loadUserChoices(){
+  try{
+    const users = await api('/api/users');
+    userListEl.innerHTML='';
+    users.forEach(u=>{
+      userListEl.insertAdjacentHTML('beforeend',`
+        <label class="d-block small mb-1">
           <input type="checkbox" value="${u.id}" class="form-check-input me-2">
           ${escapeHTML(u.username)}
         </label>`);
     });
-  } catch (err) {
-    userListEl.innerHTML = '<div class="text-danger p-2">Failed to load users</div>';
+  }catch(err){
+    userListEl.innerHTML='<span class="text-danger small">Failed to load users</span>';
   }
-});
+})();
 
-// Create chat on click
-createBtn.addEventListener('click', async () => {
+createBtn.addEventListener('click', async ()=>{
   const name = chatNameInput.value.trim();
   const user_ids = [...userListEl.querySelectorAll('input:checked')]
-                   .map(cb => parseInt(cb.value));
-
-  if (user_ids.length === 0) {
-    return alert('Select at least one user to start a chat.');
+                   .map(cb=>parseInt(cb.value));
+  if(user_ids.length===0){
+    alert('Select at least one user to start a chat.');
+    return;
   }
-
-  try {
-    const resp = await api('/api/chats/create', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ name, user_ids })
+  try{
+    const resp = await api('/api/chats/create',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name, user_ids})
     });
-
-    if (resp.success) {
-      // Close modal then redirect
-      bootstrap.Modal.getInstance(newChatModalEl).hide();
-      window.location.href = `/chat/${resp.chat.id}`;
-    } else {
-      alert(resp.error || 'Error creating chat');
+    if(resp.success){
+      window.location.href=`/chat/${resp.chat.id}`;
+    }else{
+      alert(resp.error||'Error creating chat');
     }
-  } catch (err) {
-    alert('Network error creating chat');
+  }catch(err){
+    alert('Network error');
   }
 });
 
-
-/* ─────────────────────────── initial + polling */
+/* ───────────────────── polling ───────────────────── */
 loadChats(); loadMessages();
-setInterval(loadChats,   2000);
-setInterval(loadMessages,2000);
+setInterval(loadChats, 2000);
+setInterval(loadMessages, 2000);
 </script>
 </body>
 </html>
