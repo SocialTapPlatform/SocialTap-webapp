@@ -1,233 +1,367 @@
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <!-- Apple Web App Meta -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="SocialTap">
+
   <title>SocialTap</title>
-  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" />
-  <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+
+  <!-- Favicon and App Icons -->
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+  <link rel="apple-touch-startup-image" href="{{ url_for('static', filename='launch.png') }}">
+
+  <!-- more apple stuff -->
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 
 <body data-is-admin="{{ current_user.is_admin()|string }}">
-  <div class="container-fluid py-4">
-    <div class="row">
-      <!-- Sidebar -->
-      <div class="col-md-3">
-        <div class="card sidebar-card">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Chats</h5>
-            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#newChatModal">
-              <i class="bi bi-plus-lg"></i> New Chat
-            </button>
-          </div>
-          <div class="card-body p-0">
-            <ul class="list-group list-group-flush" id="chatList">
-              <a href="{{ url_for('index') }}" class="text-decoration-none text-reset">
-                <li class="list-group-item {% if not active_chat_id %}active{% endif %}">
-                  <div>
-                    <div class="fw-bold">Global Chat</div>
-                    <small class="text-muted">All users</small>
-                  </div>
-                </li>
-              </a>
-              {% for chat in chat_rooms %}
-              <a href="{{ url_for('view_chat', chat_id=chat.id) }}" class="text-decoration-none text-reset">
-                <li class="list-group-item {% if active_chat_id == chat.id %}active{% endif %}">
-                  <div>
-                    <div class="fw-bold">{{ chat.name }}</div>
-                    <small class="text-muted">
-                      {% for participant in chat.participants if participant.id != current_user.id %}
-                        {{ participant.username }}{% if not loop.last %}, {% endif %}
-                      {% endfor %}
-                    </small>
-                  </div>
-                </li>
-              </a>
-              {% endfor %}
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <!-- Chat Panel -->
-      <div class="col-md-9">
-        <div class="card chat-card">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0" id="chatTitle">
-              {% if active_chat_id %}
-                {{ chat_rooms|selectattr('id', 'equalto', active_chat_id)|first|attr('name') }}
-              {% else %}
-                Global Chat
-              {% endif %}
-            </h5>
-            <div class="d-flex gap-2 align-items-center">
-              <span class="badge bg-success">{{ username }}</span>
-              <a href="{{ url_for('profile') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-person"></i> Profile</a>
-              {% if current_user.is_admin() %}
-              <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-shield"></i> Admin</a>
-              {% endif %}
-              <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger"><i class="bi bi-box-arrow-right"></i> Logout</a>
-            </div>
-          </div>
-
-          <div class="card-body chat-messages" id="messageContainer">
-            <div class="text-muted text-center">Loading messages...</div>
-          </div>
-
-          <div class="card-footer">
-            <form id="messageForm" class="d-flex gap-2">
-              <input type="hidden" id="activeChatId" value="{{ active_chat_id or '' }}">
-              <input type="text" class="form-control" id="messageInput" placeholder="Type a message..." required>
-              <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i></button>
-            </form>
-          </div>
-        </div>
-      </div>
+    <div class="container-fluid py-4">
+        <!-- New Chat Modal -->
+        <div class="modal fade" id="newChatModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">New Chat</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                      <!--sussy mcwussy-->
+<div class="mb-3">
+  <label for="chatName" class="form-label">Group Chat Name</label>
+  <input type="text" class="form-control" id="chatName" placeholder="Enter a name">
+</div>
+<div class="mb-3">
+  <label class="form-label">Select Users</label>
+  <div id="userCheckboxList" class="list-group" style="max-height: 200px; overflow-y: auto;">
+    <div class="text-center text-muted p-3">
+      <small>Loading users...</small>
     </div>
   </div>
+</div>
+<div class="d-grid gap-2">
+  <button class="btn btn-primary" id="createGroupChatBtn">Create Group Chat</button>
+</div>
 
-  <!-- New Chat Modal -->
-  <div class="modal fade" id="newChatModal" tabindex="-1">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">New Chat</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-3">
-            <label class="form-label">Group Chat Name</label>
-            <input type="text" class="form-control" id="chatName" placeholder="Enter a name">
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Select Users</label>
-            <div id="userCheckboxList" class="list-group">
-              <div class="text-center text-muted p-3"><small>Loading users...</small></div>
-            </div>
-          </div>
-          <div class="d-grid">
-            <button class="btn btn-primary" id="createGroupChatBtn">Create Group Chat</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    const messageContainer = document.getElementById('messageContainer');
-    const chatId = document.getElementById('activeChatId').value;
-    const isAdmin = document.body.dataset.isAdmin === "True";
-
-    function escapeHTML(str) {
-      return str.replace(/[&<>"']/g, m => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-      })[m]);
-    }
-
-    function loadMessages() {
-      if (!chatId) return;
-      fetch(`/messages?chat_id=${chatId}`)
-        .then(res => res.json())
-        .then(messages => {
-          messageContainer.innerHTML = '';
-          messages.forEach(msg => {
-            const div = document.createElement('div');
-            div.className = 'message' + (msg.username === "{{ username }}" ? ' own' : ' other');
-            let inner = `
-              <div class="message-bubble">${escapeHTML(msg.content)}</div>
-              <div class="message-meta">${escapeHTML(msg.username)} • ${escapeHTML(msg.timestamp)}</div>
-            `;
-            if (isAdmin) {
-              inner += `
-                <form method="POST" action="/admin/delete-message/${msg.id}" class="d-inline">
-                  <button type="submit" class="btn btn-sm btn-outline-danger mt-1"><i class="bi bi-trash"></i> Delete</button>
-                </form>
-              `;
-            }
-            div.innerHTML = inner;
-            messageContainer.appendChild(div);
-          });
-          messageContainer.scrollTop = messageContainer.scrollHeight;
-        });
-    }
-
-    // Load messages initially
-    loadMessages();
-
-    // Refresh every 2 seconds
-    setInterval(loadMessages, 2000);
-
-    // Send message
-    document.getElementById('messageForm').addEventListener('submit', e => {
-      e.preventDefault();
-      const input = document.getElementById('messageInput');
-      const content = input.value.trim();
-      if (!content) return;
-
-      const formData = new FormData();
-      formData.append('message', content);
-      formData.append('chat_id', chatId);
-
-      fetch('/send', { method: 'POST', body: formData })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            input.value = '';
-            loadMessages();
-          } else {
-            alert(data.error || 'Failed to send message.');
-          }
-        });
+<script>
+// Fetch and display user list for selection
+function loadUserCheckboxes() {
+  fetch('/api/users')
+    .then(response => response.json())
+    .then(users => {
+      const list = document.getElementById('userCheckboxList');
+      list.innerHTML = '';
+      users.forEach(user => {
+        const item = document.createElement('label');
+        item.className = 'list-group-item';
+        item.innerHTML = `
+          <input class="form-check-input me-1" type="checkbox" value="${user.id}" data-username="${user.username}">
+          ${user.username}
+        `;
+        list.appendChild(item);
+      });
     });
+}
 
-    // Load users for new chat modal
-    document.getElementById('newChatModal').addEventListener('shown.bs.modal', () => {
-      fetch('/api/users')
-        .then(res => res.json())
-        .then(users => {
-          const list = document.getElementById('userCheckboxList');
-          list.innerHTML = '';
-          users.forEach(user => {
-            const item = document.createElement('label');
-            item.className = 'list-group-item';
-            item.innerHTML = `
-              <input class="form-check-input me-1" type="checkbox" value="${user.id}" />
-              ${escapeHTML(user.username)}
-            `;
-            list.appendChild(item);
-          });
-        });
-    });
+document.getElementById('newChatModal').addEventListener('shown.bs.modal', loadUserCheckboxes);
 
-    // Create new chat
-    document.getElementById('createGroupChatBtn').addEventListener('click', () => {
-      const name = document.getElementById('chatName').value.trim();
-      const checkboxes = document.querySelectorAll('#userCheckboxList input:checked');
-      const user_ids = Array.from(checkboxes).map(cb => cb.value);
+document.getElementById('createGroupChatBtn').addEventListener('click', () => {
+  const name = document.getElementById('chatName').value.trim();
+  const checkboxes = document.querySelectorAll('#userCheckboxList input:checked');
+  const user_ids = Array.from(checkboxes).map(cb => cb.value);
 
-      if (!name || user_ids.length === 0) {
-        alert('Please enter a name and select at least one user.');
-        return;
+  if (!name || user_ids.length === 0) {
+    alert('Please enter a name and select at least one user.');
+    return;
+  }
+
+  fetch('/api/chats/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, user_ids })
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        location.reload();
+      } else {
+        alert(data.error || 'Error creating chat.');
       }
+    });
+});
+</script>
 
-      fetch('/api/chats/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, user_ids })
-      })
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Interface -->
+        <div class="row">
+            <!-- Sidebar with chat list -->
+            <div class="col-md-3">
+                <div class="card sidebar-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Chats</h5>
+                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" 
+                                data-bs-target="#newChatModal">
+                            <i class="bi bi-plus-lg"></i> New Chat
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <ul class="list-group list-group-flush" id="chatList">
+                            <li class="list-group-item d-flex justify-content-between align-items-center" 
+                                data-chat-id="">
+                                <div>
+                                    <div class="fw-bold">Global Chat</div>
+                                    <small class="text-muted">All users</small>
+                                </div>
+                            </li>
+                            {% for chat in chat_rooms %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center 
+                                      {% if active_chat_id == chat.id %}active{% endif %}" 
+                                data-chat-id="{{ chat.id }}">
+                                <div>
+                                    <div class="fw-bold">{{ chat.name }}</div>
+                                    <small class="text-muted">
+                                        {% for participant in chat.participants if participant.id != current_user.id %}
+                                            {{ participant.username }}{% if not loop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </small>
+                                </div>
+                                {% if chat.id != 0 %}
+                                <button class="btn btn-danger btn-sm" onclick="deleteChat({{ chat.id }})">
+                                    <i class="bi bi-trash"></i> Delete
+                                </button>
+                                {% endif %}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main chat area -->
+            <div class="col-md-9">
+                <div class="card chat-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0" id="chatTitle">
+                            {% if active_chat_id %}
+                                {{ chat_rooms|selectattr('id', 'equalto', active_chat_id)|first|attr('name') }}
+                            {% else %}
+                                Global Chat
+                            {% endif %}
+                        </h5>
+                        <div class="d-flex gap-2">
+                            <span id="currentUsername" class="d-none">{{ username }}</span>
+                            <span class="badge bg-success">{{ username }}</span>
+                            <a href="{{ url_for('profile') }}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-person"></i> Profile
+                            </a>
+                            {% if current_user.is_admin() %}
+                            <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-shield"></i> Admin
+                            </a>
+                            {% endif %}
+                            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-box-arrow-right"></i> Logout
+              
+                            </a>
+                          <button id="soundToggle" class="btn btn-sm btn-outline-secondary">
+  Sound: <span id="soundStatus">On</span>
+</button>
+                        </div>
+                    </div>
+             <div class="card-body chat-messages" id="messageContainer">
+  {% for message in messages %}
+    <div class="message">
+      <p>{{ message.content }}</p>
+
+      {% if message.sender_id != current_user.id %}
+        {% if message.sender_id in blocked_ids %}
+          <button hx-post="/unblock/{{ message.sender_id }}">Unblock</button>
+        {% else %}
+          <button hx-post="/block/{{ message.sender_id }}">Block</button>
+        {% endif %}
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+
+
+                        <div class="text-center text-muted mb-3">
+                            <small>Messages will appear here...</small>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <form id="messageForm" class="d-flex gap-2">
+                            <input type="hidden" id="activeChatId" value="{{ active_chat_id or '' }}">
+                            <input type="text" class="form-control" id="messageInput" 
+                                   placeholder="Type a message" required>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="py-3 mt-4">
+        <div class="container text-center">
+            <p class="text-muted small">
+                <a href="{{ url_for('privacy_policy') }}" class="text-decoration-none text-muted me-3">Privacy Policy</a>
+                <a href="{{ url_for('terms_of_service') }}" class="text-decoration-none text-muted">Terms of Service</a>
+                <br></br>
+                <a href="/download" class="text-decoration-none text-muted">Download</a>
+                <br></br>
+                <a href="/apidocs" class="text-decoration-none text-muted">API Docs</a>
+               
+            </p>
+            <p class="text-muted small mb-0">&copy; 2025 SocialTap. All rights reserved, protected by the </p><a href="https://www.mozilla.org/media/MPL/2.0/index.f75d2927d3c1.txt" class="text-decoration-none text-muted">Mozilla Public License 2</a>
+        </div>
+    </div>
+       
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+<script>
+  const messageContainer = document.getElementById('messageContainer');
+  const chatId = document.getElementById('activeChatId')?.value || '';
+  const isAdmin = document.body.dataset.isAdmin === "True";
+  const currentUsername = "{{ username }}";
+
+  function escapeHTML(str) {
+    return str.replace(/[&<>"']/g, m => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[m]);
+  }
+
+  function loadMessages() {
+    if (!chatId) return;
+    fetch(`/messages?chat_id=${chatId}`)
+      .then(res => res.json())
+      .then(messages => {
+        messageContainer.innerHTML = '';
+        messages.forEach(msg => {
+          const div = document.createElement('div');
+          div.className = 'message' + (msg.username === currentUsername ? ' own' : ' other');
+          let inner = `
+            <div class="message-bubble">${escapeHTML(msg.content)}</div>
+            <div class="message-meta">${escapeHTML(msg.username)} • ${escapeHTML(msg.timestamp)}</div>
+          `;
+          if (isAdmin) {
+            inner += `
+              <form method="POST" action="/admin/delete-message/${msg.id}" class="d-inline">
+                <button type="submit" class="btn btn-sm btn-outline-danger mt-1"><i class="bi bi-trash"></i> Delete</button>
+              </form>
+            `;
+          }
+          div.innerHTML = inner;
+          messageContainer.appendChild(div);
+        });
+        messageContainer.scrollTop = messageContainer.scrollHeight;
+      });
+  }
+
+  // Initial message load
+  loadMessages();
+
+  // Repeat every 2 seconds
+  setInterval(loadMessages, 2000);
+
+  // Send message
+  document.getElementById('messageForm')?.addEventListener('submit', e => {
+    e.preventDefault();
+    const input = document.getElementById('messageInput');
+    const content = input.value.trim();
+    if (!content) return;
+
+    const formData = new FormData();
+    formData.append('message', content);
+    formData.append('chat_id', chatId);
+
+    fetch('/send', { method: 'POST', body: formData })
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          window.location.href = `/chat/${data.chat.id}`;
+          input.value = '';
+          loadMessages();
         } else {
-          alert(data.error || 'Error creating chat.');
+          alert(data.error || 'Failed to send message.');
         }
       });
+  });
+
+  // Delete chat
+  function deleteChat(chatId) {
+    const userId = {{ current_user.id }};
+    fetch(`/api/chats/delete/${chatId}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Chat deleted successfully.');
+        const chatItem = document.querySelector(`[data-chat-id="${chatId}"]`);
+        if (chatItem) chatItem.remove();
+      } else {
+        alert(data.error);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('An error occurred while deleting the chat.');
     });
-  </script>
+  }
+
+  document.querySelectorAll('.delete-chat-btn').forEach(button => {
+    button.addEventListener('click', (event) => {
+      const chatId = event.target.closest('li').getAttribute('data-chat-id');
+      deleteChat(chatId);
+    });
+  });
+
+  // Sound toggle
+  const notificationSound = new Audio('/static/sounds/notification.mp3');
+  let soundEnabled = localStorage.getItem('soundEnabled');
+  if (soundEnabled === null) soundEnabled = 'true';
+  localStorage.setItem('soundEnabled', soundEnabled);
+
+  const toggleBtn = document.getElementById('soundToggle');
+  const soundStatus = document.getElementById('soundStatus');
+  soundStatus.textContent = soundEnabled === 'true' ? 'On' : 'Off';
+
+  toggleBtn?.addEventListener('click', () => {
+    soundEnabled = soundEnabled === 'true' ? 'false' : 'true';
+    localStorage.setItem('soundEnabled', soundEnabled);
+    soundStatus.textContent = soundEnabled === 'true' ? 'On' : 'Off';
+  });
+</script>
+
+    </footer>
+<div id="epilepsyWarning" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); color: white; z-index: 9999; align-items: center; justify-content: center; flex-direction: column; font-size: 1.5em; text-align: center;">
+  <p>Epilepsy Warning!</p>
+  <p>This effect may cause discomfort or seizures.</p>
+  <button id="cancelEffectBtn" style="font-size: 1.2em; padding: 1em; margin-top: 1em;">
+    Click now if you are sensitive to epilepsy (<span id="countdown">4</span>)
+  </button>
+</div>
+</div>
 </body>
 </html>
