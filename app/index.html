@@ -3,35 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <title>SocialTap</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-
   <style>
-    /* --- general colours --- */
-    body              { background:#000; color:#fff; }
-    .card             { background:#111; border:none; }
-    .form-control,
-    .btn,
-    .list-group-item  { background:#1a1a1a; color:#fff; border:1px solid #333; }
-    .list-group-item:hover          { background:#222; }
-
-    /* --- chat bubbles --- */
-    .chat-messages           { height:60vh; overflow-y:auto; padding:1rem; }
-    .bubble-wrap            { margin-bottom:.9rem; max-width:75%; }
-    .bubble-wrap.own        { margin-left:auto; text-align:right; }
-    .bubble-wrap.other      { margin-right:auto; text-align:left; }
-    .message-bubble         { padding:.7rem 1rem; border-radius:1rem; word-wrap:break-word; }
-    .own .message-bubble    { background:#ff8800; color:#000; }
-    .other .message-bubble  { background:#2a2a2a; color:#ff8800; }
-    .message-meta           { font-size:.75rem; color:#aaa; margin-top:.2rem; }
-
-    /* mini button tweaks */
-    .btn-circle { width:32px;height:32px;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center; }
+    body{background:#000;color:#fff}
+    .card{background:#111;border:none}
+    .form-control,.btn,.list-group-item{background:#1a1a1a;color:#fff;border:1px solid #333}
+    .list-group-item:hover{background:#222}
+    .chat-messages{height:60vh;overflow-y:auto;padding:1rem}
+    .bubble-wrap{margin-bottom:.9rem;max-width:75%}
+    .bubble-wrap.own{margin-left:auto;text-align:right}
+    .bubble-wrap.other{margin-right:auto;text-align:left}
+    .message-bubble{padding:.7rem 1rem;border-radius:1rem;word-wrap:break-word}
+    .own .message-bubble{background:#ff8800;color:#000}
+    .other .message-bubble{background:#2a2a2a;color:#ff8800}
+    .message-meta{font-size:.75rem;color:#aaa;margin-top:.2rem}
+    .btn-circle{width:32px;height:32px;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center}
   </style>
 </head>
-
 <body data-is-admin="{{ current_user.is_admin()|string }}">
 <div class="container-fluid py-4">
   <div class="row">
@@ -40,13 +31,10 @@
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
           <h5 class="mb-0">Chats</h5>
-          <a href="/newchat" class="btn btn-sm btn-primary btn-circle">
-  <i class="bi bi-plus-lg"></i>
-</a>
-
+          <a href="/newchat" class="btn btn-sm btn-primary btn-circle"><i class="bi bi-plus-lg"></i></a>
         </div>
         <div class="card-body p-0">
-          <ul class="list-group list-group-flush" id="chatList"><!-- filled by JS --></ul>
+          <ul class="list-group list-group-flush" id="chatList"></ul>
         </div>
       </div>
     </div>
@@ -58,24 +46,12 @@
           <h5 class="mb-0" id="chatTitle">Chat</h5>
           <div class="d-flex gap-2 align-items-center">
             <span class="badge bg-success">{{ username }}</span>
-
-            <a href="{{ url_for('profile') }}" class="btn btn-sm btn-outline-secondary btn-circle">
-              <i class="bi bi-person"></i>
-            </a>
-
+            <a href="{{ url_for('profile') }}" class="btn btn-sm btn-outline-secondary btn-circle"><i class="bi bi-person"></i></a>
             {% if current_user.is_admin() %}
-            <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-outline-primary btn-circle">
-              <i class="bi bi-shield-lock"></i>
-            </a>
+            <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-outline-primary btn-circle"><i class="bi bi-shield-lock"></i></a>
             {% endif %}
-
-            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger btn-circle">
-              <i class="bi bi-box-arrow-right"></i>
-            </a>
-
-            <button id="soundToggle" class="btn btn-sm btn-outline-secondary">
-              Sound: <span id="soundStatus">On</span>
-            </button>
+            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger btn-circle"><i class="bi bi-box-arrow-right"></i></a>
+            <button id="soundToggle" class="btn btn-sm btn-outline-secondary">Sound: <span id="soundStatus">On</span></button>
           </div>
         </div>
 
@@ -86,7 +62,7 @@
         <div class="card-footer">
           <form id="messageForm" class="d-flex gap-2">
             <input type="text" id="messageInput" class="form-control" placeholder="Type a message…" required>
-            <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i></button>
+            <button id="sendBtn" type="submit" class="btn btn-primary"><i class="bi bi-send"></i></button>
           </form>
         </div>
       </div>
@@ -94,7 +70,7 @@
   </div>
 </div>
 
-<!-- ░▒▓ New-chat modal ▓▒░ -->
+<!-- ░▒▓ new-chat modal ▓▒░ -->
 <div class="modal fade" id="newChatModal" tabindex="-1">
   <div class="modal-dialog"><div class="modal-content">
     <div class="modal-header"><h5 class="modal-title">Create Chat</h5></div>
@@ -113,128 +89,84 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-/* ─────────────────────────── globals */
-const isAdmin        = document.body.dataset.isAdmin === 'True';
-const me             = "{{ username }}";
-let   soundEnabled   = localStorage.getItem('soundEnabled') ?? 'true';
-const soundStatus    = document.getElementById('soundStatus');
-const notifSound     = document.getElementById('notifSound');
-const chatIdField    = document.getElementById('activeChatId');
-let   chatId         = chatIdField.value === '' ? null : Number(chatIdField.value);
-let   lastMsgCount   = 0;
+/* ───────────────── globals */
+const isAdmin      = document.body.dataset.isAdmin === 'True';
+const me           = "{{ username }}";
+let   soundEnabled = localStorage.getItem('soundEnabled') ?? 'true';
+const soundStatus  = document.getElementById('soundStatus');
+const notifSound   = document.getElementById('notifSound');
+const chatIdField  = document.getElementById('activeChatId');
+let   chatId       = chatIdField.value==='' ? null : Number(chatIdField.value);
+let   lastMsgCount = 0;
 
-/* ─────────────────────────── helpers */
-function escapeHTML(str){return str.replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
-function api(endpoint,opts={}){return fetch(endpoint,opts).then(r=>r.json());}
+/* ───────────────── helpers */
+function escapeHTML(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]));}
+function api(url,opts={}){return fetch(url,opts).then(r=>r.json());}
 
-/* ─────────────────────────── sidebar (chats) */
+/* ───────────────── sidebar (chats) */
 async function loadChats(){
-  const chats=await api('/api/chats');   // [{id,name,participants:[{username..}]}]
-  const list = document.getElementById('chatList');
-  list.innerHTML='';
-  // Global chat entry (id 0 or root)
-  list.insertAdjacentHTML('beforeend',`
-    <li class="list-group-item d-flex justify-content-between ${chatId===null? 'active':''}">
-      <a href="/" class="flex-grow-1 text-reset text-decoration-none">🌐 Global Chat</a>
-    </li>`);
-
+  const chats = await api('/api/chats');
+  const list  = document.getElementById('chatList');
+  list.innerHTML =
+    `<li class="list-group-item ${chatId===null?'active':''}">
+       <a href="/" class="text-reset text-decoration-none">🌐 Global Chat</a>
+     </li>`;
   chats.forEach(c=>{
-    const isActive = chatId===c.id;
-    const names = c.participants.filter(p=>p.username!==me).map(p=>p.username).join(', ');
     list.insertAdjacentHTML('beforeend',`
-      <li class="list-group-item d-flex justify-content-between ${isActive?'active':''}" data-id="${c.id}">
+      <li class="list-group-item d-flex justify-content-between ${chatId===c.id?'active':''}">
         <a href="/chat/${c.id}" class="flex-grow-1 text-reset text-decoration-none">${escapeHTML(c.name)}</a>
         ${c.id!==0?`<button class="btn btn-sm btn-danger btn-circle delete-chat" data-id="${c.id}"><i class="bi bi-trash"></i></button>`:''}
       </li>`);
   });
-
-  // attach delete buttons
   document.querySelectorAll('.delete-chat').forEach(btn=>{
     btn.onclick=e=>{
-      e.preventDefault();
-      const id=btn.dataset.id;
+      e.stopPropagation();e.preventDefault();
       if(confirm('Delete this chat?')){
-        fetch(`/api/chats/delete/${id}`,{method:'DELETE'})
-          .then(r=>r.json()).then(j=>{
-            if(j.success) location.href='/'; else alert(j.error||'Error');
-        });
+        fetch(`/api/chats/delete/${btn.dataset.id}`,{method:'DELETE'})
+        .then(r=>r.json()).then(j=>{if(j.success)location.href='/'})
       }
     };
   });
 }
 
-/* ─────────────────────────── messages */
+/* ───────────────── messages */
 async function loadMessages(){
-  const url = chatId===null ? '/messages' : `/messages?chat_id=${chatId}`;
-  const msgs = await api(url);
-  const box  = document.getElementById('messageContainer');
+  const url   = chatId===null?'/messages':`/messages?chat_id=${chatId}`;
+  const msgs  = await api(url);
+  const box   = document.getElementById('messageContainer');
   box.innerHTML='';
   msgs.forEach(m=>{
-    const wrap = document.createElement('div');
-    wrap.className='bubble-wrap '+(m.username===me?'own':'other');
-    wrap.innerHTML = `
+    const div = document.createElement('div');
+    div.className = 'bubble-wrap '+(m.username===me?'own':'other');
+    div.innerHTML = `
       <div class="message-bubble">${escapeHTML(m.content)}</div>
       <div class="message-meta">${escapeHTML(m.username)}</div>
       ${isAdmin?`<form method="POST" action="/admin/delete-message/${m.id}" class="d-inline">
-         <button type="submit" class="btn btn-sm btn-outline-danger mt-1"><i class="bi bi-trash"></i></button>
-       </form>`:''}`;
-    box.appendChild(wrap);
+                   <button type="submit" class="btn btn-sm btn-outline-danger mt-1"><i class="bi bi-trash"></i></button>
+                 </form>`:''}`;
+    box.appendChild(div);
   });
-  box.scrollTop=box.scrollHeight;
+  box.scrollTop = box.scrollHeight;
   if(soundEnabled==='true' && msgs.length>lastMsgCount) notifSound.play();
-  lastMsgCount=msgs.length;
+  lastMsgCount = msgs.length;
 }
 
-/* ─────────────────────────── send message (fixed) */
-const messageForm   = document.getElementById('messageForm');
-const messageInput  = document.getElementById('messageInput');
-
-/**
- * POST  /api/messages/send
- * { chat_id, content }
- */
-async function sendMessage (e) {
-  e.preventDefault();
-
-  const content = messageInput.value.trim();
-  if (!content) return;                               // ignore blanks
-
-  const payload = {
-    chat_id : (chatId === null ? 0 : chatId),         // 0 = global
-    content
-  };
-
-  try {
-    const res  = await fetch('/api/messages/send', {
-      method  : 'POST',
-      headers : { 'Content-Type': 'application/json' },
-      body    : JSON.stringify(payload)
-    });
-
-    const data = await res.json();
-
-    if (res.ok && data.success) {                     // ✅ sent
-      messageInput.value = '';
-      lastMsgCount = 0;                               // refresh sound logic
-      loadMessages();                               
-    } else {                                          // ⛔ server said “no”
-      alert(data.error || 'Failed to send message.');
-    }
-  } catch (err) {                                     // ⛔ network fail
-    console.error(err);
-    alert('Network error — could not send message.');
-  }
+/* ───────────────── send message */
+async function handleSend(ev){
+  ev.preventDefault();
+  const input = document.getElementById('messageInput');
+  const txt   = input.value.trim();
+  if(!txt) return;
+  const body  = JSON.stringify({chat_id:chatId===null?0:chatId, content:txt});
+  const res   = await fetch('/api/messages/send',{method:'POST',headers:{'Content-Type':'application/json'},body});
+  const j     = await res.json();
+  if(res.ok && j.success){
+    input.value=''; lastMsgCount=0; loadMessages();
+  }else alert(j.error||'Failed');
 }
+document.getElementById('messageForm').addEventListener('submit',handleSend);
 
-/* remove any old handler then attach the new one */
-messageForm.replaceWith(messageForm.cloneNode(true));       // strip old listeners
-document.getElementById('messageForm')
-        .addEventListener('submit', sendMessage);
-/* ──────────────────────────────────────────────── */
-
-
-
-/* ─────────────────────────── sound toggle */
+/* ───────────────── sound toggle */
 soundStatus.textContent = soundEnabled==='true'?'On':'Off';
 document.getElementById('soundToggle').onclick=()=>{
   soundEnabled = soundEnabled==='true'?'false':'true';
@@ -242,36 +174,9 @@ document.getElementById('soundToggle').onclick=()=>{
   soundStatus.textContent = soundEnabled==='true'?'On':'Off';
 };
 
-/* ─────────────────────────── new-chat modal */
-document.getElementById('newChatModal').addEventListener('shown.bs.modal',()=>{
-  api('/api/users').then(users=>{
-    const list=document.getElementById('userCheckboxList');
-    list.innerHTML='';
-    users.forEach(u=>{
-      list.insertAdjacentHTML('beforeend',`
-        <div>
-          <input type="checkbox" value="${u.id}" class="form-check-input me-2"> ${escapeHTML(u.username)}
-        </div>`);
-    });
-  });
-});
-document.getElementById('createChatBtn').onclick=()=>{
-  const name=document.getElementById('chatName').value.trim();
-  const ids=[...document.querySelectorAll('#userCheckboxList input:checked')].map(cb=>parseInt(cb.value));
-  if(ids.length===0) return alert('Select at least 1 user');
-  api('/api/chats/create',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({name, user_ids:ids})
-  }).then(j=>{
-    if(j.success) location.href=`/chat/${j.chat.id}`;
-    else alert(j.error||'Error');
-  });
-};
-
-/* ─────────────────────────── initial + polling */
+/* initial + polling */
 loadChats(); loadMessages();
-setInterval(loadChats,   2000);
+setInterval(loadChats,2000);
 setInterval(loadMessages,2000);
 </script>
 </body>
