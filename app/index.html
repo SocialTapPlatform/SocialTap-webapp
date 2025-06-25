@@ -76,41 +76,71 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-const isAdmin  = document.body.dataset.isAdmin === 'True';
-const me       = "{{ username }}";
-let soundOn    = (localStorage.getItem('soundEnabled') ?? 'true') === 'true';
+/* ───────────── Global Variables ───────────── */
+const isAdmin  = document.body.dataset.isAdmin === 'True'; // Check if current user is admin
+const me       = "{{ username }}";                          // Current user's username
+let soundOn    = (localStorage.getItem('soundEnabled') ?? 'true') === 'true'; // Load sound setting
 document.getElementById('soundStatus').textContent = soundOn ? 'On' : 'Off';
-const notif    = document.getElementById('notifSound');
-const chatId   = document.getElementById('activeChatId').value === '' ? null : Number(document.getElementById('activeChatId').value);
-let lastCnt    = 0;
 
-const esc = s => s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const api = (u, o = {}) => fetch(u, o).then(r => r.json());
+const notif    = document.getElementById('notifSound');     // Notification sound element
+const chatId   = document.getElementById('activeChatId').value === '' ? null : Number(document.getElementById('activeChatId').value); // Current chat ID
+let lastMessageCount = 0;           // Message count used to detect new messages
+let lastMessageIds = new Set();     // Message ID set to detect duplicates
 
+/* ───────────── Helpers ───────────── */
+// Escape HTML characters for safety
+const esc = s => s.replace(/[&<>"']/g, m => ({
+  '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+}));
+
+// Simple fetch wrapper for JSON APIs
+const api = (url, options = {}) => fetch(url, options).then(r => r.json());
+
+/* ───────────── Load Chats List ───────────── */
 async function loadChats() {
   const ul = document.getElementById('chatList');
   const chats = await api('/api/chats');
-  ul.innerHTML = `<li class="list-group-item ${chatId===null?'active':''}">
-                    <a href="/" class="text-reset text-decoration-none">🌐 Global Chat</a>
-                  </li>`;
+  
+  // Start with global chat
+  let html = `<li class="list-group-item ${chatId === null ? 'active' : ''}">
+                <a href="/" class="text-reset text-decoration-none">🌐 Global Chat</a>
+              </li>`;
+  
+  // Add each chat to the list
   chats.forEach(c => {
-    ul.insertAdjacentHTML('beforeend', `
+    html += `
       <li class="list-group-item d-flex justify-content-between ${c.id === chatId ? 'active' : ''}">
         <a href="/chat/${c.id}" class="flex-grow-1 text-reset text-decoration-none">${esc(c.name)}</a>
-        ${c.id !== 0 ? `<button class="btn btn-sm btn-danger btn-circle delete-chat" data-id="${c.id}"><i class="bi bi-trash"></i></button>` : ''}
-      </li>`);
+        ${c.id !== 0 ? `<button class="btn btn-sm btn-danger btn-circle delete-chat" data-id="${c.id}">
+          <i class="bi bi-trash"></i></button>` : ''}
+      </li>`;
   });
-  document.querySelectorAll('.delete-chat').forEach(b => b.onclick = () => {
-    if (confirm('Delete chat?')) {
-      fetch(`/api/chats/delete/${b.dataset.id}`, { method: 'DELETE' })
-        .then(r => r.json()).then(j => j.success ? location.href = '/' : alert(j.error || 'Error'));
-    }
+
+  ul.innerHTML = html;
+
+  // Attach delete button handlers
+  document.querySelectorAll('.delete-chat').forEach(button => {
+    button.onclick = () => {
+      if (confirm('Delete chat?')) {
+        fetch(`/api/chats/delete/${button.dataset.id}`, { method: 'DELETE' })
+          .then(r => r.json())
+          .then(j => j.success ? location.href = '/' : alert(j.error || 'Error'));
+      }
+    };
   });
 }
 
+/* ───────────── Load Messages ───────────── */
 async function loadMessages() {
   const box = document.getElementById('messageContainer');
   const msgs = await api(chatId === null ? '/messages' : `/messages?chat_id=${chatId}`);
+  
+  // Check if messages are different (count or ID change)
+  const newIds = new Set(msgs.map(m => m.id));
+  const isDifferent = msgs.length !== lastMessageCount || [...newIds].some(id => !lastMessageIds.has(id));
+  if (!isDifferent) return;
+
+  // Re-render only if different
   box.innerHTML = '';
   msgs.forEach(m => {
     box.insertAdjacentHTML('beforeend', `
@@ -122,13 +152,20 @@ async function loadMessages() {
         </form>` : ''}
       </div>`);
   });
+
+  // Scroll to bottom
   box.scrollTop = box.scrollHeight;
-  if (soundOn && msgs.length > lastCnt && msgs[msgs.length - 1].username !== me) {
-    notif.play().catch(() => {});
+
+  // Play sound only if last message is not by current user
+  if (soundOn && msgs.length > lastMessageCount && msgs[msgs.length - 1].username !== me) {
+    notif.play().catch(() => {}); // Suppress autoplay errors
   }
-  lastCnt = msgs.length;
+
+  lastMessageCount = msgs.length;
+  lastMessageIds = newIds;
 }
 
+/* ───────────── Send Message ───────────── */
 document.getElementById('messageForm').addEventListener('submit', async e => {
   e.preventDefault();
   const inp = document.getElementById('messageInput');
@@ -144,7 +181,7 @@ document.getElementById('messageForm').addEventListener('submit', async e => {
     const j = await res.json();
     if (res.ok && j.success) {
       inp.value = '';
-      lastCnt = 0;
+      lastMessageCount = 0; // Force reload to play sound
       loadMessages();
     } else {
       alert(j.error || 'Send failed');
@@ -155,15 +192,19 @@ document.getElementById('messageForm').addEventListener('submit', async e => {
   }
 });
 
+/* ───────────── Toggle Sound ───────────── */
 document.getElementById('soundToggle').onclick = () => {
   soundOn = !soundOn;
   localStorage.setItem('soundEnabled', soundOn);
   document.getElementById('soundStatus').textContent = soundOn ? 'On' : 'Off';
 };
 
-loadChats(); loadMessages();
-setInterval(loadChats, 2000);
-setInterval(loadMessages, 2000);
+/* ───────────── Initialization ───────────── */
+loadChats();
+loadMessages();
+setInterval(loadChats, 5000);    // Refresh chats every 5 seconds
+setInterval(loadMessages, 1000); // Refresh messages every second
 </script>
+
 </body>
 </html>
