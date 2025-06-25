@@ -76,135 +76,174 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-/* ───────────── Global Variables ───────────── */
-const isAdmin  = document.body.dataset.isAdmin === 'True'; // Check if current user is admin
-const me       = "{{ username }}";                          // Current user's username
-let soundOn    = (localStorage.getItem('soundEnabled') ?? 'true') === 'true'; // Load sound setting
+/* ══════════════════════════════════════════════════════════════
+   SocialTap single-page chat script
+   • polls messages every   1 s   (loadMessages)
+   • polls chat list every  5 s   (loadChats)
+   • switches chats client-side – no full-page reload, no flash
+   • plays /static/sounds/notification.mp3 when a *different* user posts
+   • supports admin message delete & user chat delete (except global)
+   ══════════════════════════════════════════════════════════════ */
+
+/* ────────--- Global state ---──────── */
+const isAdmin      = document.body.dataset.isAdmin === 'True';   // privileges
+const me           = "{{ username }}";                           // my username
+let   soundOn      = (localStorage.getItem('soundEnabled') ?? 'true') === 'true';
 document.getElementById('soundStatus').textContent = soundOn ? 'On' : 'Off';
 
-const notif    = document.getElementById('notifSound');     // Notification sound element
-const chatId   = document.getElementById('activeChatId').value === '' ? null : Number(document.getElementById('activeChatId').value); // Current chat ID
-let lastMessageCount = 0;           // Message count used to detect new messages
-let lastMessageIds = new Set();     // Message ID set to detect duplicates
+const notifSound   = document.getElementById('notifSound');      // <audio>
+const titleEl      = document.getElementById('chatTitle');       // heading
+let   chatId       = document.getElementById('activeChatId').value === ''
+                     ? null                                       // null ⇒ global
+                     : Number(document.getElementById('activeChatId').value);
 
-/* ───────────── Helpers ───────────── */
-// Escape HTML characters for safety
-const esc = s => s.replace(/[&<>"']/g, m => ({
-  '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
-}));
+let lastMsgCount   = 0;                    // for diff detection & sounds
+let lastMsgIds     = new Set();            // prevents rerender when nothing changed
 
-// Simple fetch wrapper for JSON APIs
-const api = (url, options = {}) => fetch(url, options).then(r => r.json());
+/* ────────--- Utilities ---──────── */
+const esc = s => s.replace(/[&<>"']/g,
+                m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+const api = (u,o={}) => fetch(u,o).then(r=>r.json());
 
-/* ───────────── Load Chats List ───────────── */
-async function loadChats() {
-  const ul = document.getElementById('chatList');
-  const chats = await api('/api/chats');
-  
-  // Start with global chat
-  let html = `<li class="list-group-item ${chatId === null ? 'active' : ''}">
-                <a href="/" class="text-reset text-decoration-none">🌐 Global Chat</a>
-              </li>`;
-  
-  // Add each chat to the list
-  chats.forEach(c => {
-    html += `
-      <li class="list-group-item d-flex justify-content-between ${c.id === chatId ? 'active' : ''}">
-        <a href="/chat/${c.id}" class="flex-grow-1 text-reset text-decoration-none">${esc(c.name)}</a>
-        ${c.id !== 0 ? `<button class="btn btn-sm btn-danger btn-circle delete-chat" data-id="${c.id}">
-          <i class="bi bi-trash"></i></button>` : ''}
+/* ────────--- Chat list rendering / click handling ---──────── */
+async function loadChats(){
+  const ul    = document.getElementById('chatList');
+  const chats = await api('/api/chats');                // [{id,name,…}]
+  /* build html */
+  let html = `
+    <li class="list-group-item d-flex justify-content-between ${chatId===null?'active':''}">
+      <a href="#" class="chat-link flex-grow-1 text-reset text-decoration-none"
+         data-id="global" data-name="Global Chat">🌐 Global Chat</a>
+    </li>`;
+  chats.forEach(c=>{
+     html += `
+      <li class="list-group-item d-flex justify-content-between ${c.id===chatId?'active':''}">
+        <a href="#" class="chat-link flex-grow-1 text-reset text-decoration-none"
+           data-id="${c.id}" data-name="${esc(c.name)}">${esc(c.name)}</a>
+        ${c.id!==0?`<button class="btn btn-sm btn-danger btn-circle delete-chat" data-id="${c.id}">
+           <i class="bi bi-trash"></i></button>`:''}
       </li>`;
   });
-
   ul.innerHTML = html;
 
-  // Attach delete button handlers
-  document.querySelectorAll('.delete-chat').forEach(button => {
-    button.onclick = () => {
-      if (confirm('Delete chat?')) {
-        fetch(`/api/chats/delete/${button.dataset.id}`, { method: 'DELETE' })
-          .then(r => r.json())
-          .then(j => j.success ? location.href = '/' : alert(j.error || 'Error'));
+  /* delete-chat buttons */
+  document.querySelectorAll('.delete-chat').forEach(btn=>{
+    btn.onclick = ()=>{
+      if(confirm('Delete chat?')){
+        fetch(`/api/chats/delete/${btn.dataset.id}`,{method:'DELETE'})
+          .then(r=>r.json()).then(j=>{
+              if(j.success) { if(Number(btn.dataset.id)===chatId) chatId=null; loadChats(); }
+              else alert(j.error||'Error');
+          });
       }
+    };
+  });
+
+  /* chat-switch links (single-page) */
+  document.querySelectorAll('.chat-link').forEach(link=>{
+    link.onclick = e=>{
+      e.preventDefault();
+      const newId   = link.dataset.id === 'global' ? null : Number(link.dataset.id);
+      if(newId === chatId) return;                 // already there
+      chatId        = newId;
+      titleEl.textContent = link.dataset.name;     // update header
+      /* highlight active */
+      document.querySelectorAll('#chatList .list-group-item')
+              .forEach(li=>li.classList.remove('active'));
+      link.parentElement.classList.add('active');
+      /* update address bar (so refresh/back works) */
+      history.pushState({}, '', chatId===null? '/' : `/chat/${chatId}`);
+      /* reset diff trackers so fresh messages load without flash */
+      lastMsgCount = 0;
+      lastMsgIds.clear();
+      loadMessages();
     };
   });
 }
 
-/* ───────────── Load Messages ───────────── */
-async function loadMessages() {
-  const box = document.getElementById('messageContainer');
-  const msgs = await api(chatId === null ? '/messages' : `/messages?chat_id=${chatId}`);
-  
-  // Check if messages are different (count or ID change)
-  const newIds = new Set(msgs.map(m => m.id));
-  const isDifferent = msgs.length !== lastMessageCount || [...newIds].some(id => !lastMessageIds.has(id));
-  if (!isDifferent) return;
+/* ────────--- Message list rendering ---──────── */
+async function loadMessages(){
+  const url  = chatId===null ? '/messages' : `/messages?chat_id=${chatId}`;
+  const box  = document.getElementById('messageContainer');
+  const msgs = await api(url);                       // [{id,content,username,…}]
 
-  // Re-render only if different
+  /* skip repaint if nothing new */
+  const ids   = msgs.map(m=>m.id);
+  const diff  = msgs.length!==lastMsgCount ||
+                ids.some(id => !lastMsgIds.has(id));
+  if(!diff) return;
+
+  /* repaint */
   box.innerHTML = '';
-  msgs.forEach(m => {
+  msgs.forEach(m=>{
     box.insertAdjacentHTML('beforeend', `
-      <div class="bubble-wrap ${m.username === me ? 'own' : 'other'}">
+      <div class="bubble-wrap ${m.username===me?'own':'other'}">
         <div class="message-bubble">${esc(m.content)}</div>
         <div class="message-meta">${esc(m.username)}</div>
-        ${isAdmin ? `<form method="POST" action="/admin/delete-message/${m.id}" class="d-inline">
-          <button class="btn btn-sm btn-outline-danger mt-1"><i class="bi bi-trash"></i></button>
-        </form>` : ''}
+        ${isAdmin?`<form method="POST" action="/admin/delete-message/${m.id}" class="d-inline">
+           <button class="btn btn-sm btn-outline-danger mt-1"><i class="bi bi-trash"></i></button>
+         </form>`:''}
       </div>`);
   });
-
-  // Scroll to bottom
   box.scrollTop = box.scrollHeight;
 
-  // Play sound only if last message is not by current user
-  if (soundOn && msgs.length > lastMessageCount && msgs[msgs.length - 1].username !== me) {
-    notif.play().catch(() => {}); // Suppress autoplay errors
+  /* play sound if another user sent the newest message */
+  if(soundOn && msgs.length>0 &&
+     msgs.length>lastMsgCount &&
+     msgs[msgs.length-1].username !== me){
+       notifSound.play().catch(()=>{});
   }
 
-  lastMessageCount = msgs.length;
-  lastMessageIds = newIds;
+  lastMsgCount = msgs.length;
+  lastMsgIds   = new Set(ids);
 }
 
-/* ───────────── Send Message ───────────── */
-document.getElementById('messageForm').addEventListener('submit', async e => {
-  e.preventDefault();
-  const inp = document.getElementById('messageInput');
-  const text = inp.value.trim();
-  if (!text) return;
+/* ────────--- Send message ---──────── */
+document.getElementById('messageForm').addEventListener('submit', async ev=>{
+  ev.preventDefault();
+  const input = document.getElementById('messageInput');
+  const text  = input.value.trim();
+  if(!text) return;
 
   const fd = new FormData();
-  fd.append('chat_id', chatId === null ? 0 : chatId);
+  fd.append('chat_id', chatId===null?0:chatId);
   fd.append('message', text);
 
-  try {
-    const res = await fetch('/send', { method: 'POST', body: fd });
-    const j = await res.json();
-    if (res.ok && j.success) {
-      inp.value = '';
-      lastMessageCount = 0; // Force reload to play sound
+  try{
+    const r = await fetch('/send',{method:'POST',body:fd});
+    const j = await r.json();
+    if(r.ok && j.success){
+      input.value='';
+      lastMsgCount = 0;          // force reload to display our msg
       loadMessages();
-    } else {
-      alert(j.error || 'Send failed');
-    }
-  } catch (err) {
-    console.error(err);
-    alert('Network error');
-  }
+    }else alert(j.error||'Send failed');
+  }catch(err){ console.error(err); alert('Network error'); }
 });
 
-/* ───────────── Toggle Sound ───────────── */
-document.getElementById('soundToggle').onclick = () => {
+/* ────────--- Sound toggle ---──────── */
+document.getElementById('soundToggle').onclick = ()=>{
   soundOn = !soundOn;
-  localStorage.setItem('soundEnabled', soundOn);
+  localStorage.setItem('soundEnabled',soundOn);
   document.getElementById('soundStatus').textContent = soundOn ? 'On' : 'Off';
 };
 
-/* ───────────── Initialization ───────────── */
-loadChats();
-loadMessages();
-setInterval(loadChats, 5000);    // Refresh chats every 5 seconds
-setInterval(loadMessages, 1000); // Refresh messages every second
+/* ───────--- Initial run + polling ---──────── */
+loadChats(); loadMessages();
+setInterval(loadChats,   5000);   // update chat list every 5 s
+setInterval(loadMessages,1000);   // update messages  every 1 s
+
+/* restore correct chat when user presses browser back/forward */
+window.addEventListener('popstate',()=>{
+  const path = location.pathname;
+  if(path.startsWith('/chat/')){
+     const newId = Number(path.split('/').pop());
+     document.querySelector(`a.chat-link[data-id="${newId}"]`)?.click();
+  }else{
+     document.querySelector(`a.chat-link[data-id="global"]`)?.click();
+  }
+});
 </script>
+
 
 </body>
 </html>
