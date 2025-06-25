@@ -5,8 +5,10 @@
   <title>SocialTap</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
   <style>
     body{background:#000;color:#fff}
     .card{background:#111;border:none}
@@ -27,7 +29,6 @@
 
 <div class="container-fluid py-4">
   <div class="row">
-    <!-- ░▒▓ Sidebar ▓▒░ -->
     <div class="col-md-3">
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -40,7 +41,6 @@
       </div>
     </div>
 
-    <!-- ░▒▓ Chat panel ▓▒░ -->
     <div class="col-md-9 d-flex flex-column">
       <div class="card flex-fill">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -76,80 +76,94 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-/* ─── globals & helpers ─── */
+const isAdmin  = document.body.dataset.isAdmin === 'True';
 const me       = "{{ username }}";
-const chatId   = document.getElementById('activeChatId').value===''?null:Number(document.getElementById('activeChatId').value);
-let   soundOn  = (localStorage.getItem('soundEnabled')??'true')==='true';
-document.getElementById('soundStatus').textContent=soundOn?'On':'Off';
+let soundOn    = (localStorage.getItem('soundEnabled') ?? 'true') === 'true';
+document.getElementById('soundStatus').textContent = soundOn ? 'On' : 'Off';
 const notif    = document.getElementById('notifSound');
-let   lastCnt  = 0;
+const chatId   = document.getElementById('activeChatId').value === '' ? null : Number(document.getElementById('activeChatId').value);
+let lastCnt    = 0;
 
-const esc=s=>s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const api=(u,o={})=>fetch(u,o).then(r=>r.json());
+const esc = s => s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const api = (u, o = {}) => fetch(u, o).then(r => r.json());
 
-/* ─── chats list ─── */
-async function loadChats(){
-  const ul=document.getElementById('chatList');
-  const chats=await api('/api/chats');
-  ul.innerHTML=`<li class="list-group-item ${chatId===null?'active':''}">
-                  <a href="/" class="text-reset text-decoration-none">🌐 Global Chat</a>
-                </li>`;
-  chats.forEach(c=>{
-    ul.insertAdjacentHTML('beforeend',`
-      <li class="list-group-item d-flex justify-content-between ${c.id===chatId?'active':''}">
+async function loadChats() {
+  const ul = document.getElementById('chatList');
+  const chats = await api('/api/chats');
+  ul.innerHTML = `<li class="list-group-item ${chatId===null?'active':''}">
+                    <a href="/" class="text-reset text-decoration-none">🌐 Global Chat</a>
+                  </li>`;
+  chats.forEach(c => {
+    ul.insertAdjacentHTML('beforeend', `
+      <li class="list-group-item d-flex justify-content-between ${c.id === chatId ? 'active' : ''}">
         <a href="/chat/${c.id}" class="flex-grow-1 text-reset text-decoration-none">${esc(c.name)}</a>
+        ${c.id !== 0 ? `<button class="btn btn-sm btn-danger btn-circle delete-chat" data-id="${c.id}"><i class="bi bi-trash"></i></button>` : ''}
       </li>`);
   });
+  document.querySelectorAll('.delete-chat').forEach(b => b.onclick = () => {
+    if (confirm('Delete chat?')) {
+      fetch(`/api/chats/delete/${b.dataset.id}`, { method: 'DELETE' })
+        .then(r => r.json()).then(j => j.success ? location.href = '/' : alert(j.error || 'Error'));
+    }
+  });
 }
 
-/* ─── messages ─── */
-async function loadMessages(){
-  const box=document.getElementById('messageContainer');
-  const msgs=await api(chatId===null?'/messages':`/messages?chat_id=${chatId}`);
-  box.innerHTML='';
-  msgs.forEach(m=>{
-    box.insertAdjacentHTML('beforeend',`
-      <div class="bubble-wrap ${m.username===me?'own':'other'}">
+async function loadMessages() {
+  const box = document.getElementById('messageContainer');
+  const msgs = await api(chatId === null ? '/messages' : `/messages?chat_id=${chatId}`);
+  box.innerHTML = '';
+  msgs.forEach(m => {
+    box.insertAdjacentHTML('beforeend', `
+      <div class="bubble-wrap ${m.username === me ? 'own' : 'other'}">
         <div class="message-bubble">${esc(m.content)}</div>
         <div class="message-meta">${esc(m.username)}</div>
+        ${isAdmin ? `<form method="POST" action="/admin/delete-message/${m.id}" class="d-inline">
+          <button class="btn btn-sm btn-outline-danger mt-1"><i class="bi bi-trash"></i></button>
+        </form>` : ''}
       </div>`);
   });
-  box.scrollTop=box.scrollHeight;
-  if(soundOn && msgs.length>lastCnt){notif.play().catch(()=>{});}
-  lastCnt=msgs.length;
+  box.scrollTop = box.scrollHeight;
+  if (soundOn && msgs.length > lastCnt && msgs[msgs.length - 1].username !== me) {
+    notif.play().catch(() => {});
+  }
+  lastCnt = msgs.length;
 }
 
-/* ─── send message (multipart/form) ─── */
-document.getElementById('messageForm').addEventListener('submit',async e=>{
+document.getElementById('messageForm').addEventListener('submit', async e => {
   e.preventDefault();
-  const inp=document.getElementById('messageInput');
-  const text=inp.value.trim();
-  if(!text) return;
+  const inp = document.getElementById('messageInput');
+  const text = inp.value.trim();
+  if (!text) return;
 
-  const fd=new FormData();
-  fd.append('message', text);             /* THIS matches request.form.get('message') */
-  fd.append('chat_id', chatId===null?0:chatId);
+  const fd = new FormData();
+  fd.append('chat_id', chatId === null ? 0 : chatId);
+  fd.append('message', text);
 
-  try{
-    const res=await fetch('/send',{method:'POST',body:fd});
-    const j=await res.json();
-    if(res.ok && j.success){
-      inp.value=''; lastCnt=0; loadMessages();
-    }else alert(j.error||'Failed');
-  }catch(e){console.error(e);alert('Network error');}
+  try {
+    const res = await fetch('/send', { method: 'POST', body: fd });
+    const j = await res.json();
+    if (res.ok && j.success) {
+      inp.value = '';
+      lastCnt = 0;
+      loadMessages();
+    } else {
+      alert(j.error || 'Send failed');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Network error');
+  }
 });
 
-/* ─── init & polling ─── */
-loadChats(); loadMessages();
-setInterval(loadChats ,2000);
-setInterval(loadMessages,2000);
-
-/* sound toggle */
-document.getElementById('soundToggle').onclick=()=>{
-  soundOn=!soundOn;
-  localStorage.setItem('soundEnabled',soundOn);
-  document.getElementById('soundStatus').textContent=soundOn?'On':'Off';
+document.getElementById('soundToggle').onclick = () => {
+  soundOn = !soundOn;
+  localStorage.setItem('soundEnabled', soundOn);
+  document.getElementById('soundStatus').textContent = soundOn ? 'On' : 'Off';
 };
+
+loadChats(); loadMessages();
+setInterval(loadChats, 2000);
+setInterval(loadMessages, 2000);
 </script>
 </body>
 </html>
