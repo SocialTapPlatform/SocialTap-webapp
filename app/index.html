@@ -185,21 +185,53 @@ async function loadMessages(){
   lastMsgCount=msgs.length;
 }
 
-/* ─────────────────────────── send message */
-document.getElementById('messageForm').addEventListener('submit',e=>{
-  e.preventDefault();
-  const txt = document.getElementById('messageInput');
-  const content = txt.value.trim();
-  if(!content) return;
-  api('/api/messages/send',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({ chat_id: chatId===null?0:chatId, content })
-  }).then(j=>{
-    if(j.success){ txt.value=''; loadMessages(); }
-    else alert(j.error||'Error');
-  });
+<!-- send message -->
+<script>
+const formSend = document.getElementById('messageForm');
+const inputMsg = document.getElementById('messageInput');
+
+/**
+ * POST /api/messages/send
+ * body = {chat_id, content}
+ */
+async function sendMessage() {
+  const content = inputMsg.value.trim();
+  if (!content) return;                          // blank
+
+  try {
+    const res = await fetch('/api/messages/send', {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify({
+        chat_id : (chatId === null ? 0 : chatId), // 0 = global chat
+        content
+      })
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      inputMsg.value = '';
+      loadMessages();          // refresh list immediately
+    } else {
+      // server-side validation (cool-down, blacklist, etc.)
+      alert(data.error || 'Failed to send message.');
+    }
+
+  } catch (err) {
+    console.error(err);
+    alert('Network error — could not send message.');
+  }
+}
+
+/* attach handler */
+formSend.addEventListener('submit', e => {
+  e.preventDefault();         // stay on page
+  sendMessage();
 });
+</script>
+<!-- ────────────────────────────────────── -->
+
 
 /* ─────────────────────────── sound toggle */
 soundStatus.textContent = soundEnabled==='true'?'On':'Off';
