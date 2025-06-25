@@ -185,52 +185,53 @@ async function loadMessages(){
   lastMsgCount=msgs.length;
 }
 
-<!-- send message -->
-<script>
-const formSend = document.getElementById('messageForm');
-const inputMsg = document.getElementById('messageInput');
+/* ─────────────────────────── send message (fixed) */
+const messageForm   = document.getElementById('messageForm');
+const messageInput  = document.getElementById('messageInput');
 
 /**
- * POST /api/messages/send
- * body = {chat_id, content}
+ * POST  /api/messages/send
+ * { chat_id, content }
  */
-async function sendMessage() {
-  const content = inputMsg.value.trim();
-  if (!content) return;                          // blank
+async function sendMessage (e) {
+  e.preventDefault();
+
+  const content = messageInput.value.trim();
+  if (!content) return;                               // ignore blanks
+
+  const payload = {
+    chat_id : (chatId === null ? 0 : chatId),         // 0 = global
+    content
+  };
 
   try {
-    const res = await fetch('/api/messages/send', {
-      method : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body   : JSON.stringify({
-        chat_id : (chatId === null ? 0 : chatId), // 0 = global chat
-        content
-      })
+    const res  = await fetch('/api/messages/send', {
+      method  : 'POST',
+      headers : { 'Content-Type': 'application/json' },
+      body    : JSON.stringify(payload)
     });
 
     const data = await res.json();
 
-    if (res.ok && data.success) {
-      inputMsg.value = '';
-      loadMessages();          // refresh list immediately
-    } else {
-      // server-side validation (cool-down, blacklist, etc.)
+    if (res.ok && data.success) {                     // ✅ sent
+      messageInput.value = '';
+      lastMsgCount = 0;                               // refresh sound logic
+      loadMessages();                               
+    } else {                                          // ⛔ server said “no”
       alert(data.error || 'Failed to send message.');
     }
-
-  } catch (err) {
+  } catch (err) {                                     // ⛔ network fail
     console.error(err);
     alert('Network error — could not send message.');
   }
 }
 
-/* attach handler */
-formSend.addEventListener('submit', e => {
-  e.preventDefault();         // stay on page
-  sendMessage();
-});
-</script>
-<!-- ────────────────────────────────────── -->
+/* remove any old handler then attach the new one */
+messageForm.replaceWith(messageForm.cloneNode(true));       // strip old listeners
+document.getElementById('messageForm')
+        .addEventListener('submit', sendMessage);
+/* ──────────────────────────────────────────────── */
+
 
 
 /* ─────────────────────────── sound toggle */
