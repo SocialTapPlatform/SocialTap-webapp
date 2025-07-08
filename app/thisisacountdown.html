@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>---------</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      background-color: #111;
+      color: #fff;
+      font-family: sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+    }
+    h1 {
+      margin-bottom: 1rem;
+    }
+    .countdown {
+      font-size: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>July 30, 2026.</h1>
+  <div class="countdown" id="countdown">Loading…</div>
+
+  <a href="https://youtube.com/@BrokenLHmusic">@BrokenLH</a>
+
+
+  <script>
+    const targetDate = new Date("2026-07-30T00:00:00Z").getTime();
+    const display = document.getElementById("countdown");
+
+    function updateCountdown() {
+      const now = new Date().getTime();
+      const diff = targetDate - now;
+
+      if (diff <= 0) {
+        display.textContent = "It's time!";
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+
+      display.textContent = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+    }
+
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+  </script>
+</body>
+</html>
