@@ -5,24 +5,22 @@
   <title>SocialTap</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
-
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-
   <style>
-    body{background:#000;color:#fff}
-    .card{background:#111;border:none}
-    .form-control,.btn,.list-group-item{background:#1a1a1a;color:#fff;border:1px solid #333}
-    .list-group-item:hover{background:#222}
-    .chat-messages{height:60vh;overflow-y:auto;padding:1rem}
-    .bubble-wrap{margin-bottom:.9rem;max-width:75%}
-    .bubble-wrap.own{margin-left:auto;text-align:right}
-    .bubble-wrap.other{margin-right:auto;text-align:left}
-    .message-bubble{padding:.7rem 1rem;border-radius:1rem;word-wrap:break-word}
-    .own .message-bubble{background:#ff8800;color:#000}
-    .other .message-bubble{background:#2a2a2a;color:#ff8800}
-    .message-meta{font-size:.75rem;color:#aaa;margin-top:.2rem}
-    .btn-circle{width:32px;height:32px;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center}
+    body { background: #000; color: #fff }
+    .card { background: #111; border: none }
+    .form-control, .btn, .list-group-item { background: #1a1a1a; color: #fff; border: 1px solid #333 }
+    .list-group-item:hover { background: #222 }
+    .chat-messages { height: 60vh; overflow-y: auto; padding: 1rem }
+    .bubble-wrap { margin-bottom: .9rem; max-width: 75% }
+    .bubble-wrap.own { margin-left: auto; text-align: right }
+    .bubble-wrap.other { margin-right: auto; text-align: left }
+    .message-bubble { padding: .7rem 1rem; border-radius: 1rem; word-wrap: break-word }
+    .own .message-bubble { background: #ff8800; color: #000 }
+    .other .message-bubble { background: #2a2a2a; color: #ff8800 }
+    .message-meta { font-size: .75rem; color: #aaa; margin-top: .2rem }
+    .btn-circle { width: 32px; height: 32px; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center }
   </style>
 </head>
 <body data-is-admin="{{ current_user.is_admin()|string }}">
@@ -76,174 +74,142 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-/* ══════════════════════════════════════════════════════════════
-   SocialTap single-page chat script
-   • polls messages every   1 s   (loadMessages)
-   • polls chat list every  5 s   (loadChats)
-   • switches chats client-side – no full-page reload, no flash
-   • plays /static/sounds/notification.mp3 when a *different* user posts
-   • supports admin message delete & user chat delete (except global)
-   ══════════════════════════════════════════════════════════════ */
-
-/* ────────--- Global state ---──────── */
-const isAdmin      = document.body.dataset.isAdmin === 'True';   // privileges
-const me           = "{{ username }}";                           // my username
-let   soundOn      = (localStorage.getItem('soundEnabled') ?? 'true') === 'true';
+const isAdmin  = document.body.dataset.isAdmin === 'True';
+const me       = "{{ username }}";
+let soundOn    = (localStorage.getItem('soundEnabled') ?? 'true') === 'true';
 document.getElementById('soundStatus').textContent = soundOn ? 'On' : 'Off';
+const notifSound = document.getElementById('notifSound');
+const titleEl = document.getElementById('chatTitle');
+let chatId    = document.getElementById('activeChatId').value === '' ? null : Number(document.getElementById('activeChatId').value);
+let lastMsgCount = 0;
+let lastMsgIds = new Set();
+let initialized = false;
 
-const notifSound   = document.getElementById('notifSound');      // <audio>
-const titleEl      = document.getElementById('chatTitle');       // heading
-let   chatId       = document.getElementById('activeChatId').value === ''
-                     ? null                                       // null ⇒ global
-                     : Number(document.getElementById('activeChatId').value);
+const esc = s => s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const api = (u, o = {}) => fetch(u, o).then(r => r.json());
 
-let lastMsgCount   = 0;                    // for diff detection & sounds
-let lastMsgIds     = new Set();            // prevents rerender when nothing changed
-
-/* ────────--- Utilities ---──────── */
-const esc = s => s.replace(/[&<>"']/g,
-                m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
-const api = (u,o={}) => fetch(u,o).then(r=>r.json());
-
-/* ────────--- Chat list rendering / click handling ---──────── */
 async function loadChats(){
-  const ul    = document.getElementById('chatList');
-  const chats = await api('/api/chats');                // [{id,name,…}]
-  /* build html */
+  const ul = document.getElementById('chatList');
+  const chats = await api('/api/chats');
   let html = `
     <li class="list-group-item d-flex justify-content-between ${chatId===null?'active':''}">
-      <a href="#" class="chat-link flex-grow-1 text-reset text-decoration-none"
-         data-id="global" data-name="Global Chat">🌐 Global Chat</a>
+      <a href="#" class="chat-link flex-grow-1 text-reset text-decoration-none" data-id="global" data-name="Global Chat">🌐 Global Chat</a>
     </li>`;
-  chats.forEach(c=>{
-     html += `
+  chats.forEach(c => {
+    html += `
       <li class="list-group-item d-flex justify-content-between ${c.id===chatId?'active':''}">
-        <a href="#" class="chat-link flex-grow-1 text-reset text-decoration-none"
-           data-id="${c.id}" data-name="${esc(c.name)}">${esc(c.name)}</a>
-        ${c.id!==0?`<button class="btn btn-sm btn-danger btn-circle delete-chat" data-id="${c.id}">
-           <i class="bi bi-trash"></i></button>`:''}
+        <a href="#" class="chat-link flex-grow-1 text-reset text-decoration-none" data-id="${c.id}" data-name="${esc(c.name)}">${esc(c.name)}</a>
+        ${c.id!==0?`<button class="btn btn-sm btn-danger btn-circle delete-chat" data-id="${c.id}"><i class="bi bi-trash"></i></button>`:''}
       </li>`;
   });
   ul.innerHTML = html;
 
-  /* delete-chat buttons */
-  document.querySelectorAll('.delete-chat').forEach(btn=>{
-    btn.onclick = ()=>{
-      if(confirm('Delete chat?')){
-        fetch(`/api/chats/delete/${btn.dataset.id}`,{method:'DELETE'})
-          .then(r=>r.json()).then(j=>{
-              if(j.success) { if(Number(btn.dataset.id)===chatId) chatId=null; loadChats(); }
-              else alert(j.error||'Error');
+  document.querySelectorAll('.delete-chat').forEach(btn => {
+    btn.onclick = () => {
+      if (confirm('Delete chat?')) {
+        fetch(`/api/chats/delete/${btn.dataset.id}`, { method: 'DELETE' })
+          .then(r => r.json()).then(j => {
+            if (j.success) {
+              if (Number(btn.dataset.id) === chatId) {
+                chatId = null;
+                titleEl.textContent = 'Global Chat';
+              }
+              loadChats(); loadMessages();
+            } else alert(j.error || 'Error');
           });
       }
     };
   });
 
-  /* chat-switch links (single-page) */
-  document.querySelectorAll('.chat-link').forEach(link=>{
-    link.onclick = e=>{
+  document.querySelectorAll('.chat-link').forEach(link => {
+    link.onclick = e => {
       e.preventDefault();
-      const newId   = link.dataset.id === 'global' ? null : Number(link.dataset.id);
-      if(newId === chatId) return;                 // already there
-      chatId        = newId;
-      titleEl.textContent = link.dataset.name;     // update header
-      /* highlight active */
-      document.querySelectorAll('#chatList .list-group-item')
-              .forEach(li=>li.classList.remove('active'));
+      const newId = link.dataset.id === 'global' ? null : Number(link.dataset.id);
+      if (newId === chatId) return;
+      chatId = newId;
+      titleEl.textContent = link.dataset.name;
+      document.querySelectorAll('#chatList .list-group-item').forEach(li => li.classList.remove('active'));
       link.parentElement.classList.add('active');
-      /* update address bar (so refresh/back works) */
-      history.pushState({}, '', chatId===null? '/' : `/chat/${chatId}`);
-      /* reset diff trackers so fresh messages load without flash */
+      history.pushState({}, '', chatId === null ? '/' : `/chat/${chatId}`);
       lastMsgCount = 0;
       lastMsgIds.clear();
+      initialized = false;
       loadMessages();
     };
   });
 }
 
-/* ────────--- Message list rendering ---──────── */
 async function loadMessages(){
-  const url  = chatId===null ? '/messages' : `/messages?chat_id=${chatId}`;
-  const box  = document.getElementById('messageContainer');
-  const msgs = await api(url);                       // [{id,content,username,…}]
+  const url = chatId === null ? '/messages' : `/messages?chat_id=${chatId}`;
+  const box = document.getElementById('messageContainer');
+  const msgs = await api(url);
+  const ids = msgs.map(m => m.id);
+  const diff = msgs.length !== lastMsgCount || ids.some(id => !lastMsgIds.has(id));
+  if (!diff) return;
 
-  /* skip repaint if nothing new */
-  const ids   = msgs.map(m=>m.id);
-  const diff  = msgs.length!==lastMsgCount ||
-                ids.some(id => !lastMsgIds.has(id));
-  if(!diff) return;
-
-  /* repaint */
   box.innerHTML = '';
-  msgs.forEach(m=>{
+  msgs.forEach(m => {
     box.insertAdjacentHTML('beforeend', `
-      <div class="bubble-wrap ${m.username===me?'own':'other'}">
+      <div class="bubble-wrap ${m.username === me ? 'own' : 'other'}">
         <div class="message-bubble">${esc(m.content)}</div>
         <div class="message-meta">${esc(m.username)}</div>
-        ${isAdmin?`<form method="POST" action="/admin/delete-message/${m.id}" class="d-inline">
-           <button class="btn btn-sm btn-outline-danger mt-1"><i class="bi bi-trash"></i></button>
-         </form>`:''}
+        ${isAdmin ? `<form method="POST" action="/admin/delete-message/${m.id}" class="d-inline">
+          <button class="btn btn-sm btn-outline-danger mt-1"><i class="bi bi-trash"></i></button>
+        </form>` : ''}
       </div>`);
   });
   box.scrollTop = box.scrollHeight;
 
-  /* play sound if another user sent the newest message */
-  if(soundOn && msgs.length>0 &&
-     msgs.length>lastMsgCount &&
-     msgs[msgs.length-1].username !== me){
-       notifSound.play().catch(()=>{});
+  if (initialized && soundOn && msgs.length > lastMsgCount && msgs[msgs.length - 1].username !== me) {
+    notifSound.play().catch(() => {});
   }
 
   lastMsgCount = msgs.length;
-  lastMsgIds   = new Set(ids);
+  lastMsgIds = new Set(ids);
+  initialized = true;
 }
 
-/* ────────--- Send message ---──────── */
-document.getElementById('messageForm').addEventListener('submit', async ev=>{
-  ev.preventDefault();
-  const input = document.getElementById('messageInput');
-  const text  = input.value.trim();
-  if(!text) return;
-
+document.getElementById('messageForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const inp = document.getElementById('messageInput');
+  const text = inp.value.trim();
+  if (!text) return;
   const fd = new FormData();
-  fd.append('chat_id', chatId===null?0:chatId);
+  fd.append('chat_id', chatId === null ? 0 : chatId);
   fd.append('message', text);
-
-  try{
-    const r = await fetch('/send',{method:'POST',body:fd});
-    const j = await r.json();
-    if(r.ok && j.success){
-      input.value='';
-      lastMsgCount = 0;          // force reload to display our msg
+  try {
+    const res = await fetch('/send', { method: 'POST', body: fd });
+    const j = await res.json();
+    if (res.ok && j.success) {
+      inp.value = '';
+      lastMsgCount = 0;
+      initialized = true;
       loadMessages();
-    }else alert(j.error||'Send failed');
-  }catch(err){ console.error(err); alert('Network error'); }
+    } else {
+      alert(j.error || 'Send failed');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Network error');
+  }
 });
 
-/* ────────--- Sound toggle ---──────── */
-document.getElementById('soundToggle').onclick = ()=>{
+document.getElementById('soundToggle').onclick = () => {
   soundOn = !soundOn;
-  localStorage.setItem('soundEnabled',soundOn);
+  localStorage.setItem('soundEnabled', soundOn);
   document.getElementById('soundStatus').textContent = soundOn ? 'On' : 'Off';
 };
 
-/* ───────--- Initial run + polling ---──────── */
 loadChats(); loadMessages();
-setInterval(loadChats,   5000);   // update chat list every 5 s
-setInterval(loadMessages,1000);   // update messages  every 1 s
+setInterval(loadChats, 5000);
+setInterval(loadMessages, 1000);
 
-/* restore correct chat when user presses browser back/forward */
-window.addEventListener('popstate',()=>{
+window.addEventListener('popstate', () => {
   const path = location.pathname;
-  if(path.startsWith('/chat/')){
-     const newId = Number(path.split('/').pop());
-     document.querySelector(`a.chat-link[data-id="${newId}"]`)?.click();
-  }else{
-     document.querySelector(`a.chat-link[data-id="global"]`)?.click();
-  }
+  const newId = path.startsWith('/chat/') ? Number(path.split('/').pop()) : null;
+  document.querySelector(`a.chat-link[data-id="${newId === null ? 'global' : newId}"]`)?.click();
 });
 </script>
-
 
 </body>
 </html>
