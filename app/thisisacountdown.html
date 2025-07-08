@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Countdown to July 30, 2026</title>
+  <title>---------</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <!-- Fredoka font -->
   <link href="https://fonts.googleapis.com/css2?family=Fredoka&display=swap" rel="stylesheet">
 
-  <!-- Bootstrap for easy layout and button styles -->
+  <!-- Bootstrap for layout -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
   <style>
@@ -69,13 +69,13 @@
 </head>
 <body>
 
-  <h1>July 30, 2026.</h1>
+  <h1>June 30, 2026. 11AM MST</h1>
   <div id="countdown">Loading…</div>
 
   <div class="social-links">
     <a href="https://www.youtube.com/@BrokenLHmusic" target="_blank">
       <img src="https://www.svgrepo.com/show/13671/youtube.svg" alt="YouTube Logo">
-      @BrokenLHmusic
+      @BrokenLHmusic (where the premeire will be)
     </a>
     <a href="https://www.youtube.com/@socialtap.social" target="_blank">
       <img src="https://www.svgrepo.com/show/13671/youtube.svg" alt="YouTube Logo">
@@ -84,7 +84,8 @@
   </div>
 
   <script>
-    const targetDate = new Date("2026-07-30T00:00:00Z");
+    // Set MST (UTC-7) target time using UTC
+    const targetDate = new Date(Date.UTC(2026, 6, 30, 18, 0, 0)); // July is month 6 (0-indexed)
 
     function updateCountdown() {
       const now = new Date();
