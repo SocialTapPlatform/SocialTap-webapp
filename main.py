@@ -839,7 +839,8 @@ def delete_chat(chat_id):
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+        logging.error(f"An error occurred while deleting chat ID {chat_id}: {str(e)}")
+        return jsonify({"error": "An internal error occurred. Please try again later."}), 500
 
     return jsonify({"success": "Chat and all its messages have been deleted."}), 200
 
