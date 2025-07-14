@@ -97,7 +97,10 @@ def block_bad_paths():
         time.sleep(5)
         return '', 204
 
-
+@app.route('/userinvite')
+def user_invite():
+    inviter = request.args.get('from', 'Someone')
+    return render_template('invite.html', inviter=inviter)
 
 
 # Load blacklist words
