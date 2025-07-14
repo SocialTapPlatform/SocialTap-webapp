@@ -59,13 +59,44 @@
                                     <div class="mb-3">
                                         <strong>Email:</strong> {{ user.email }}
                                     </div>
-                                    <div class="mb-3">
-                                        <strong>Member since:</strong> {{ user.last_seen.strftime('%B %d, %Y') }}
-                                    </div>
+                                
                                 </div>
                             </div>
                         </div>
-                        
+                        <hr class="my-5">
+
+<div class="row">
+  <div class="col-md-12">
+    <div class="card border-warning">
+      <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0">Invite a Friend</h5>
+      </div>
+      <div class="card-body">
+        <p>Invite someone to SocialTap using your personal link:</p>
+        <div class="input-group">
+          <input type="text" id="inviteLink" class="form-control" readonly
+                 value="https://socialtap.social/userinvite?={{ user.username }}">
+          <button class="btn btn-warning" type="button" onclick="copyInvite()">Copy</button>
+        </div>
+        <small class="text-muted d-block mt-2">Your username will be shown as the inviter.</small>
+        <div id="copySuccess" class="text-success mt-2" style="display: none;">Link copied!</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function copyInvite() {
+  const input = document.getElementById('inviteLink');
+  input.select();
+  input.setSelectionRange(0, 99999); // mobile support
+  document.execCommand('copy');
+  document.getElementById('copySuccess').style.display = 'block';
+  setTimeout(() => {
+    document.getElementById('copySuccess').style.display = 'none';
+  }, 2000);
+}
+</script>
                         <hr>
                         
                         <div class="row mt-4">
