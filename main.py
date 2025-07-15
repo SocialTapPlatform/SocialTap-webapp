@@ -958,34 +958,29 @@ def banned():
 def newch():
     return render_template('newchat.html')
 
-app.route('/api/invite', methods=['POST'])
+@app.route('/api/invite', methods=['POST'])
 @login_required
 def generate_invite():
     data = request.get_json()
     chat_id = data.get('chat_id')
-
-    if not chat_id:
-        return jsonify({'success': False, 'error': 'Missing chat_id'}), 400
-
+    
+    # Validate chat_id
     chat = ChatRoom.query.get(chat_id)
-
     if not chat:
-        return jsonify({'success': False, 'error': 'Chat not found'}), 404
-
-    # Ensure it's a group chat and the user is a participant
-    if not chat.is_private:
-        return jsonify({'success': False, 'error': 'Invite links are for group chats only'}), 400
-
+        return jsonify({"error": "Chat not found"}), 404
     if current_user not in chat.participants:
-        return jsonify({'success': False, 'error': 'You are not a member of this chat'}), 403
+        return jsonify({"error": "You are not a participant in this chat"}), 403
+    if chat.is_private == False:
+        return jsonify({"error": "Global chat cannot be invited to"}), 400
 
-    # Create invite link
-    invite = GroupInvite(chat_room=chat)
+    # Generate invite
+    token = secrets.token_urlsafe(16)
+    invite = GroupInvite(chat_id=chat.id, token=token, created_at=datetime.utcnow())
     db.session.add(invite)
     db.session.commit()
 
-    invite_url = url_for('handle_invite', token=invite.token, _external=True)
-    return jsonify({'success': True, 'invite_link': invite_url})
+    link = url_for('handle_invite', token=token, _external=True)
+    return jsonify({"success": True, "link": link})
 
 
 
