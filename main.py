@@ -817,7 +817,21 @@ def delete_user(user_id):
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
 
+@app.route('/admin/delete-expired-invites', methods=['POST'])
+@login_required
+def delete_expired_invites():
+    if not current_user.is_admin:
+        return jsonify({"error": "Unauthorized"}), 403
 
+    expired = GroupInvite.query.all()
+    deleted_count = 0
+    for invite in expired:
+        if invite.is_expired:
+            db.session.delete(invite)
+            deleted_count += 1
+
+    db.session.commit()
+    return jsonify({"success": True, "deleted": deleted_count})
 
 
 @app.route('/api/chats/delete/<int:chat_id>', methods=['DELETE'])
