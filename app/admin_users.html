@@ -20,7 +20,11 @@
                 <i class="bi bi-arrow-left"></i> Back to Chat
             </a>
         </div>
-
+<div class="text-center mt-4">
+  <button id="cleanInvites" class="btn btn-danger">🧹 Delete Expired Invites</button>
+  <div id="cleanupResult" class="mt-2"></div>
+</div>
+        
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -198,5 +202,29 @@
             });
         });
     </script>
+    <script>
+document.getElementById('cleanInvites').addEventListener('click', async () => {
+  const resultBox = document.getElementById('cleanupResult');
+  resultBox.innerText = "Cleaning expired invites...";
+
+  try {
+    const res = await fetch('/admin/delete-expired-invites', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      resultBox.innerHTML = `<div class="alert alert-success">✅ Deleted ${data.deleted} expired invite(s).</div>`;
+    } else {
+      resultBox.innerHTML = `<div class="alert alert-danger">❌ Error: ${data.error}</div>`;
+    }
+  } catch (err) {
+    resultBox.innerHTML = `<div class="alert alert-danger">Network error.</div>`;
+  }
+});
+</script>
 </body>
 </html>
