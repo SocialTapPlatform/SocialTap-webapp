@@ -114,11 +114,11 @@ class Report(db.Model):
 
 class GroupInvite(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    token = db.Column(db.String(32), unique=True, nullable=False, default=lambda: secrets.token_urlsafe(16))
-    chat_room_id = db.Column(db.Integer, db.ForeignKey('chat_room.id'), nullable=False)
+    chat_id = db.Column(db.Integer, db.ForeignKey('chat_room.id'), nullable=False)
+    token = db.Column(db.String(128), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    chat_room = db.relationship('ChatRoom')
+
+    chat_room = db.relationship('ChatRoom', backref='invites')
 
     def is_expired(self):
-        return (datetime.utcnow() - self.created_at).days >= 13
+        return (datetime.utcnow() - self.created_at).days > 13
