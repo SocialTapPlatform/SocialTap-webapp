@@ -1003,3 +1003,17 @@ def handle_invite(token):
 @login_required
 def generate_invite_page():
     return render_template("invgen.html")
+
+@app.route('/invite/<token>/accept', methods=['POST'])
+@login_required
+def accept_invite(token):
+    invite = GroupInvite.query.filter_by(token=token).first()
+    if not invite or invite.is_expired():
+        return "Invalid or expired invite.", 404
+
+    chat = invite.chat_room
+    if current_user not in chat.participants:
+        chat.participants.append(current_user)
+        db.session.commit()
+
+    return redirect(url_for('index', chat_id=chat.id)) 
