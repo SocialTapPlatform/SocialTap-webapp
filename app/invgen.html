@@ -77,7 +77,7 @@ document.getElementById('inviteForm').addEventListener('submit', async (e) => {
     if (data.success) {
       resultBox.innerHTML = `<div class="alert alert-success">
         <strong>Invite Link:</strong><br>
-        <a href="${data.invite_link}" class="text-warning" target="_blank">${data.invite_link}</a>
+        <a href="${data.link}" class="text-warning" target="_blank">${data.link}</a>
       </div>`;
     } else {
       resultBox.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
