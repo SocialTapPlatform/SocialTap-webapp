@@ -16,6 +16,7 @@ import time
 from flask_cors import CORS
 import sqlite3
 import json
+import secrets
 #to make sure that jinja doesnt give out error nightmares :)
 @app.context_processor
 def inject_blocking_utils():
