@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>Group Invite – SocialTap</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #000;
+      color: #fff;
+      font-family: "Segoe UI", sans-serif;
+    }
+    .invite-box {
+      max-width: 500px;
+      margin: 100px auto;
+      padding: 2rem;
+      border: 2px solid orange;
+      border-radius: 10px;
+      text-align: center;
+    }
+    .btn-join {
+      background-color: orange;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="invite-box">
+    <h2>You’ve been invited to join:</h2>
+    <h3 class="mb-4">{{ chat.name }}</h3>
+    <form action="{{ url_for('accept_invite', token=token) }}" method="POST">
+      <button class="btn btn-join btn-lg">Join Chat</button>
+    </form>
+  </div>
+</body>
+</html>
