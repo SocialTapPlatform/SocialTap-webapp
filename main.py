@@ -6,7 +6,7 @@ from wtforms.validators import DataRequired, Email, Length, ValidationError, Equ
 from flask import Flask, request, abort, send_file
 from flask import redirect
 from app import app, db
-from models import User, Message, ChatRoom, cipher_suite
+from models import User, Message, ChatRoom, cipher_suite, GroupInvite
 import uuid
 from datetime import datetime, timedelta
 import logging
@@ -957,3 +957,49 @@ def banned():
 @login_required
 def newch():
     return render_template('newchat.html')
+
+app.route('/api/invite', methods=['POST'])
+@login_required
+def generate_invite():
+    data = request.get_json()
+    chat_id = data.get('chat_id')
+
+    if not chat_id:
+        return jsonify({'success': False, 'error': 'Missing chat_id'}), 400
+
+    chat = ChatRoom.query.get(chat_id)
+
+    if not chat:
+        return jsonify({'success': False, 'error': 'Chat not found'}), 404
+
+    # Ensure it's a group chat and the user is a participant
+    if not chat.is_private:
+        return jsonify({'success': False, 'error': 'Invite links are for group chats only'}), 400
+
+    if current_user not in chat.participants:
+        return jsonify({'success': False, 'error': 'You are not a member of this chat'}), 403
+
+    # Create invite link
+    invite = GroupInvite(chat_room=chat)
+    db.session.add(invite)
+    db.session.commit()
+
+    invite_url = url_for('handle_invite', token=invite.token, _external=True)
+    return jsonify({'success': True, 'invite_link': invite_url})
+
+
+
+#hmmmmmmmmmmmmmmmmmmmmmmmmmm
+@app.route('/invite/<token>')
+def handle_invite(token):
+    invite = GroupInvite.query.filter_by(token=token).first()
+    if not invite or invite.is_expired():
+        return render_template("invite_invalid.html"), 404
+
+    chat = invite.chat_room
+    return render_template("invite_page.html", chat=chat, token=token)
+
+@app.route("/generateinvites")
+@login_required
+def generate_invite_page():
+    return render_template("invgen.html")
