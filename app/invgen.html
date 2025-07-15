@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>Generate Invite – SocialTap</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <style>
+    body {
+      background-color: #000;
+      color: #fff;
+    }
+    .card {
+      background-color: #111;
+      border: 1px solid #ff8800;
+    }
+    .btn-primary {
+      background-color: #ff8800;
+      border-color: #ff8800;
+    }
+    .btn-primary:hover {
+      background-color: #ff9900;
+      border-color: #ff9900;
+    }
+    .result-box {
+      margin-top: 1rem;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card shadow">
+        <div class="card-header text-center">
+          <h4 class="mb-0">Generate Group Chat Invite</h4>
+        </div>
+        <div class="card-body">
+          <form id="inviteForm">
+            <div class="mb-3">
+              <label for="chatId" class="form-label">Group Chat ID</label>
+              <input type="number" class="form-control" id="chatId" required placeholder="Enter group chat ID">
+            </div>
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary">Generate Invite Link</button>
+            </div>
+          </form>
+
+          <div id="result" class="result-box mt-4 text-center"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('inviteForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const chatId = document.getElementById('chatId').value;
+  const resultBox = document.getElementById('result');
+  resultBox.innerHTML = 'Generating...';
+
+  try {
+    const res = await fetch('/api/invite', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ chat_id: parseInt(chatId) })
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      resultBox.innerHTML = `<div class="alert alert-success">
+        <strong>Invite Link:</strong><br>
+        <a href="${data.invite_link}" class="text-warning" target="_blank">${data.invite_link}</a>
+      </div>`;
+    } else {
+      resultBox.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
+    }
+  } catch (err) {
+    resultBox.innerHTML = `<div class="alert alert-danger">Network error. Try again later.</div>`;
+  }
+});
+</script>
+
+</body>
+</html>
