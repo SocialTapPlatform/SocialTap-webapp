@@ -958,22 +958,21 @@ def banned():
 def newch():
     return render_template('newchat.html')
 
+
 @app.route('/api/invite', methods=['POST'])
 @login_required
 def generate_invite():
     data = request.get_json()
     chat_id = data.get('chat_id')
-    
-    # Validate chat_id
+
     chat = ChatRoom.query.get(chat_id)
     if not chat:
         return jsonify({"error": "Chat not found"}), 404
     if current_user not in chat.participants:
         return jsonify({"error": "You are not a participant in this chat"}), 403
-    if chat.is_private == False:
+    if chat.id == 0:  # Only block Global Chat, not public group chats
         return jsonify({"error": "Global chat cannot be invited to"}), 400
 
-    # Generate invite
     token = secrets.token_urlsafe(16)
     invite = GroupInvite(chat_id=chat.id, token=token, created_at=datetime.utcnow())
     db.session.add(invite)
