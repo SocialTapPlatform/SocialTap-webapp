@@ -21,6 +21,13 @@ import json
 def inject_blocking_utils():
     return dict(is_blocked=is_blocked)
 
+
+#for render :)
+@app.route('/idkwhattonamethis')
+def idkwhatoputhereeither():
+    return 'OK', 200
+
+
 #sussy code
 BLOCKED_USERS_FILE = "blocked_users.json"
 
