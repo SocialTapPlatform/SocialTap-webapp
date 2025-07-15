@@ -1026,3 +1026,26 @@ def accept_invite(token):
         db.session.commit()
 
     return redirect(url_for('index', chat_id=chat.id)) 
+
+
+@app.route('/api/chat/<int:chat_id>/remove/<int:user_id>', methods=['POST'])
+@login_required
+def remove_member(chat_id, user_id):
+    chat = ChatRoom.query.get_or_404(chat_id)
+    
+    # Owner = first participant
+    owner = chat.participants.order_by(User.id).first()
+    if not owner or current_user != owner:
+        return jsonify({"error": "Only the chat owner can remove members"}), 403
+
+    user_to_remove = User.query.get_or_404(user_id)
+    
+    if user_to_remove not in chat.participants:
+        return jsonify({"error": "User is not in this chat"}), 400
+    if user_to_remove == owner:
+        return jsonify({"error": "You cannot remove the owner"}), 400
+
+    chat.participants.remove(user_to_remove)
+    db.session.commit()
+
+    return jsonify({"success": True, "message": f"{user_to_remove.username} was removed from the chat."})
