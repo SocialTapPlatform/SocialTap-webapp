@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let windowHasFocus = true;
     let notificationsEnabled = false;
     
-    // Initialize notifications
+    // Initialize again. but something different.
     initNotifications();
     
     fetchMessages();
@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', function() {
    
     
     
-    // Check if window has focus
+    // Check if window has the user's attention.
     window.addEventListener('focus', function() {
         windowHasFocus = true;
     });
@@ -36,25 +36,24 @@ document.addEventListener('DOMContentLoaded', function() {
         windowHasFocus = false;
     });
     
-    // Initialize browser notifications
+    // The definition for initializing that other thing
     function initNotifications() {
-        // Check if the browser supports notifications
+        // Check if the browser supports annoying popups
         if (!('Notification' in window)) {
             console.log('This browser does not support notifications');
             return;
         }
         
-        // Check if permission is already granted
+        // Check if permission is already granted to display those annoying popups
         if (Notification.permission === 'granted') {
             notificationsEnabled = true;
         } else if (Notification.permission !== 'denied') {
-            // Add a button to request notification permission
             const notifyBtn = document.createElement('button');
             notifyBtn.className = 'btn btn-sm btn-outline-secondary me-2';
             notifyBtn.innerHTML = '<i class="bi bi-bell"></i> Enable Notifications';
             notifyBtn.addEventListener('click', requestNotificationPermission);
             
-            // Add the button to the header
+            // broken, won't fix.
             const headerBtns = document.querySelector('.card-header .d-flex.gap-2');
             headerBtns.prepend(notifyBtn);
         }
@@ -70,7 +69,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (notifyBtn) {
                     notifyBtn.remove();
                 }
-                // Show a success notification
+
                 showNotification('Chat Notifications', 'Notifications are now enabled!');
             }
         });
@@ -84,12 +83,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 icon: '/static/favicon.ico' 
             });
             
-            // Close the notification after 5 seconds
+
             setTimeout(function() {
                 notification.close();
             }, 5000);
             
-            // Focus the window when the notification is clicked
+
             notification.onclick = function() {
                 window.focus();
                 this.close();
@@ -97,7 +96,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Chat list item click
+    // click
     chatList.addEventListener('click', function(e) {
         const chatItem = e.target.closest('.list-group-item');
         if (chatItem) {
@@ -106,7 +105,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 activeChat = chatId;
                 activeChatId.value = chatId;
 
-                // Chat delete button click
+                // click x2
 chatList.addEventListener('click', async function(e) {
     const deleteBtn = e.target.closest('.delete-chat-btn');
     if (deleteBtn) {
@@ -118,19 +117,19 @@ chatList.addEventListener('click', async function(e) {
     }
 });
 
-                // Update UI
+                // Update UI to be cool
                 document.querySelectorAll('#chatList .list-group-item').forEach(item => {
                     item.classList.remove('active');
                 });
                 chatItem.classList.add('active');
                 
-                // Update chat title
+                // Update chat title to be cool
                 chatTitle.textContent = chatItem.querySelector('.fw-bold').textContent;
                 
-                // Fetch messages for selected chat
+                // Fetch messages for selected chat (to be cool)
                 fetchMessages();
                 
-                // Update URL without page reload
+                // Update URL without page reload (to be cool)
                 const url = chatId ? `/chat/${chatId}` : '/';
                 history.pushState({}, '', url);
             }
