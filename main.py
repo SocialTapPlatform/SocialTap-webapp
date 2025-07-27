@@ -1057,4 +1057,4 @@ def remove_member(chat_id, user_id):
 @app.route('/fallback')
 @login_required
 def fallback():
-    return render_template('fallback.html'
+    return render_template('fallback.html')
