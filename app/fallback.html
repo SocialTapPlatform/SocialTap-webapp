@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>SocialTap (Fallback)</title>
-  <meta http-equiv="X-UA-Compatible" content="IE=edge"><!-- ie compatibility -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body { background: #000; color: #fff; font-family: sans-serif; padding: 1rem; }
@@ -20,7 +20,7 @@
   </style>
 </head>
 <body>
-  <h1>SocialTap (Lite)</h1>
+  <h1>SocialTap (Fallback)</h1>
   <div>
     <label for="chatSelect">Chat Room:</label>
     <select id="chatSelect"></select>
@@ -36,8 +36,6 @@
   </p>
 
   <script>
-  // <= IE11-safe JS
-
   var chatSelect = document.getElementById('chatSelect');
   var messagesEl = document.getElementById('messages');
   var sendForm   = document.getElementById('sendForm');
@@ -62,14 +60,21 @@
     var xhr = new XMLHttpRequest();
     xhr.open('POST', url, true);
     xhr.withCredentials = true;
-    xhr.setRequestHeader('Content-Type', 'application/json');
+
+    var form = new FormData();
+    for (var key in data) {
+      if (data.hasOwnProperty(key)) {
+        form.append(key, data[key]);
+      }
+    }
+
     xhr.onreadystatechange = function() {
       if (xhr.readyState === 4) {
         if (xhr.status === 200) cb(null, xhr.responseText);
         else cb(new Error('Status '+xhr.status));
       }
     };
-    xhr.send(JSON.stringify(data));
+    xhr.send(form);
   }
 
   function loadChats() {
@@ -79,7 +84,6 @@
         var chats = JSON.parse(txt);
       } catch(e) { return; }
       chatSelect.innerHTML = '';
-      // global chat
       var opt = document.createElement('option');
       opt.value = 0; 
       opt.text = '🌐 Global Chat';
@@ -91,7 +95,6 @@
         o.text = c.name || 'Chat '+c.id;
         chatSelect.appendChild(o);
       }
-      // preserve selection
       if (currentChatId !== null) {
         chatSelect.value = currentChatId;
       } else {
@@ -138,7 +141,6 @@
     });
   };
 
-  // initial load + polling
   loadChats();
   loadMessages();
   setInterval(loadChats,    5000);
