@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>SocialTap (Fallback)</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"><!-- ie compatibility -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { background: #000; color: #fff; font-family: sans-serif; padding: 1rem; }
+    select, input, button, textarea { 
+      background: #111; color: #fff; border: 1px solid #333; padding: .5rem; 
+      width: 100%; margin-bottom: .5rem; box-sizing: border-box;
+    }
+    #messages { height: 300px; overflow-y: auto; border:1px solid #333; padding: .5rem; margin-bottom: .5rem; }
+    .msg { margin-bottom: .5rem; }
+    .own { text-align: right; }
+    button { cursor: pointer; }
+    a { color: #ff8800; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <h1>SocialTap (Lite)</h1>
+  <div>
+    <label for="chatSelect">Chat Room:</label>
+    <select id="chatSelect"></select>
+  </div>
+  <div id="messages">Loading messages…</div>
+  <form id="sendForm">
+    <input type="text" id="messageInput" placeholder="Type message…" autocomplete="off">
+    <button type="submit">Send</button>
+  </form>
+  <p>
+    <a href="/logout">Logout</a> |
+    <a href="/">Back to full client</a>
+  </p>
+
+  <script>
+  // <= IE11-safe JS
+
+  var chatSelect = document.getElementById('chatSelect');
+  var messagesEl = document.getElementById('messages');
+  var sendForm   = document.getElementById('sendForm');
+  var messageInput = document.getElementById('messageInput');
+
+  var currentChatId = null;
+
+  function xhrGet(url, cb) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.withCredentials = true;
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState === 4) {
+        if (xhr.status === 200) cb(null, xhr.responseText);
+        else cb(new Error('Status '+xhr.status));
+      }
+    };
+    xhr.send();
+  }
+
+  function xhrPost(url, data, cb) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    xhr.withCredentials = true;
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState === 4) {
+        if (xhr.status === 200) cb(null, xhr.responseText);
+        else cb(new Error('Status '+xhr.status));
+      }
+    };
+    xhr.send(JSON.stringify(data));
+  }
+
+  function loadChats() {
+    xhrGet('/api/chats', function(err, txt) {
+      if (err) return;
+      try {
+        var chats = JSON.parse(txt);
+      } catch(e) { return; }
+      chatSelect.innerHTML = '';
+      // global chat
+      var opt = document.createElement('option');
+      opt.value = 0; 
+      opt.text = '🌐 Global Chat';
+      chatSelect.appendChild(opt);
+      for (var i = 0; i < chats.length; i++) {
+        var c = chats[i];
+        var o = document.createElement('option');
+        o.value = c.id;
+        o.text = c.name || 'Chat '+c.id;
+        chatSelect.appendChild(o);
+      }
+      // preserve selection
+      if (currentChatId !== null) {
+        chatSelect.value = currentChatId;
+      } else {
+        chatSelect.value = 0;
+      }
+    });
+  }
+
+  function loadMessages() {
+    var url = '/messages' + (currentChatId && currentChatId !== 0 ? '?chat_id=' + currentChatId : '');
+    xhrGet(url, function(err, txt) {
+      if (err) return;
+      try {
+        var msgs = JSON.parse(txt);
+      } catch(e) { return; }
+      messagesEl.innerHTML = '';
+      for (var i = 0; i < msgs.length; i++) {
+        var m = msgs[i];
+        var d = document.createElement('div');
+        d.className = 'msg ' + (m.username === '{{username}}' ? 'own' : '');
+        d.innerText = m.username + ': ' + m.content;
+        messagesEl.appendChild(d);
+      }
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    });
+  }
+
+  chatSelect.onchange = function() {
+    currentChatId = parseInt(chatSelect.value, 10);
+    loadMessages();
+  };
+
+  sendForm.onsubmit = function(e) {
+    e.preventDefault();
+    var txt = messageInput.value.replace(/^\s+|\s+$/g,'');
+    if (!txt) return;
+    xhrPost('/send', { chat_id: currentChatId, content: txt }, function(err, txt) {
+      if (!err) {
+        messageInput.value = '';
+        loadMessages();
+      } else {
+        alert('Send failed');
+      }
+    });
+  };
+
+  // initial load + polling
+  loadChats();
+  loadMessages();
+  setInterval(loadChats,    5000);
+  setInterval(loadMessages, 1000);
+  </script>
+</body>
+</html>
