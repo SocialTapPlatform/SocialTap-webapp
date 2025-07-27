@@ -1049,3 +1049,12 @@ def remove_member(chat_id, user_id):
     db.session.commit()
 
     return jsonify({"success": True, "message": f"{user_to_remove.username} was removed from the chat."})
+
+
+
+
+
+@app.route('/fallback')
+@login_required
+def fallback():
+    return render_template('fallback.html'
