@@ -2,256 +2,104 @@
 <html lang="en" data-bs-theme="dark">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SocialTap</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-  <style>
-    body { background: #000; color: #fff }
-    .card { background: #111; border: none }
-    .form-control, .btn, .list-group-item { background: #1a1a1a; color: #fff; border: 1px solid #333 }
-    .list-group-item:hover { background: #222 }
-    .chat-messages { height: 60vh; overflow-y: auto; padding: 1rem }
-    .bubble-wrap { margin-bottom: .9rem; max-width: 75% }
-    .bubble-wrap.own { margin-left: auto; text-align: right }
-    .bubble-wrap.other { margin-right: auto; text-align: left }
-    .message-bubble { padding: .7rem 1rem; border-radius: 1rem; word-wrap: break-word }
-    .own .message-bubble { background: #ff8800; color: #000 }
-    .other .message-bubble { background: #2a2a2a; color: #ff8800 }
-    .message-meta { font-size: .75rem; color: #aaa; margin-top: .2rem }
-    .btn-circle { width: 32px; height: 32px; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center }
-  </style>
+  <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="SocialTap">
 </head>
-<body data-is-admin="{{ current_user.is_admin()|string }}">
-
-<div class="container-fluid py-4">
-  <div class="row">
-    <div class="col-md-3">
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h5 class="mb-0">Chats</h5>
-          <a href="/newchat" class="btn btn-sm btn-primary btn-circle"><i class="bi bi-plus-lg"></i></a>
-        </div>
-        <div class="card-body p-0">
-          <ul class="list-group list-group-flush" id="chatList"></ul>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-9 d-flex flex-column">
-      <div class="card flex-fill">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h5 class="mb-0" id="chatTitle">Chat</h5>
-          <div class="d-flex gap-2 align-items-center">
-            <span class="badge bg-success">{{ username }}</span>
-            <a href="{{ url_for('profile') }}" class="btn btn-sm btn-outline-secondary btn-circle"><i class="bi bi-person"></i></a>
-            {% if current_user.is_admin() %}
-            <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-outline-primary btn-circle"><i class="bi bi-shield-lock"></i></a>
-            {% endif %}
-            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger btn-circle"><i class="bi bi-box-arrow-right"></i></a>
-            <button id="soundToggle" class="btn btn-sm btn-outline-secondary">Sound: <span id="soundStatus">On</span></button>
+<body>
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h4 class="mb-0">Login</h4>
           </div>
-        </div>
+          <div class="card-body">
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                {% for message in messages %}
+                  <div class="alert alert-info">{{ message }}</div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+            
+            <form method="POST" action="{{ url_for('login') }}" onsubmit="return checkAgeGate();">
+              {{ form.hidden_tag() }}
+              <div class="mb-3">
+                {{ form.email.label(class="form-label") }}
+                {{ form.email(class="form-control") }}
+                {% for error in form.email.errors %}
+                  <div class="text-danger">{{ error }}</div>
+                {% endfor %}
+              </div>
+              <div class="mb-3">
+                {{ form.password.label(class="form-label") }}
+                {{ form.password(class="form-control") }}
+                {% for error in form.password.errors %}
+                  <div class="text-danger">{{ error }}</div>
+                {% endfor %}
+              </div>
 
-        <div class="card-body chat-messages d-flex flex-column" id="messageContainer">
-          <div class="text-muted text-center">Loading…</div>
-        </div>
+              <!-- Age confirmation -->
+              <div class="mb-3">
+                <label for="ageConfirm" class="form-label">Do you meet the <a href="/minagereq">minimum age requirements for your country</a>?</label>
+                <select id="ageConfirm" class="form-control" required>
+                  <option value="">-- Please Confirm --</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+                <div id="ageError" class="text-danger" style="display:none;">You must meet the minimum age requirement in your respective country.</div>
+              </div>
 
-        <div class="card-footer">
-          <form id="messageForm" class="d-flex gap-2 mb-2">
-            <input id="messageInput" class="form-control" placeholder="Type a message…" required>
-            <button class="btn btn-primary" type="submit"><i class="bi bi-send"></i></button>
-          </form>
-          <div id="participantBox" class="text-center text-muted small"></div>
+              {{ form.submit(class="btn btn-primary") }}
+            </form>
+
+            <div class="text-center my-3">
+              <a href="{{ url_for('google_auth.login') }}" class="btn btn-outline-primary w-100">
+                <img src="{{ url_for('static', filename='images/googlelogin.png') }}" alt="Google Logo" style="height: 18px; margin-right: 8px;">
+                Sign in with Google
+              </a>
+              <hr>
+              <p>Don't have an account? <a href="{{ url_for('register') }}">Register here</a></p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<audio id="notifSound" src="/static/sounds/notification.mp3" preload="auto"></audio>
-<input type="hidden" id="activeChatId" value="{{ active_chat_id if active_chat_id is not none else '' }}">
+  <!-- Footer -->
+  <footer class="py-3 mt-4">
+    <div class="container text-center">
+      <p class="text-muted small">
+        <a href="{{ url_for('privacy_policy') }}" class="text-decoration-none text-muted me-3">Privacy Policy</a>
+        <a href="{{ url_for('terms_of_service') }}" class="text-decoration-none text-muted">Terms of Service</a>
+        <br><br>
+        <a href="/download" class="text-decoration-none text-muted">Download</a>
+        <br><br>
+        <a href="/apidocs" class="text-decoration-none text-muted">API Docs</a>
+      </p>
+      <p class="text-muted small mb-0">&copy; 2025 SocialTap. All rights reserved, protected by the </p>
+      <a href="https://www.mozilla.org/media/MPL/2.0/index.f75d2927d3c1.txt" class="text-decoration-none text-muted">Mozilla Public License 2</a>
+    </div>
+  </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-const isAdmin  = document.body.dataset.isAdmin === 'True';
-const me       = "{{ username }}";
-const meId     = {{ current_user.id }};
-let soundOn    = (localStorage.getItem('soundEnabled') ?? 'true') === 'true';
-document.getElementById('soundStatus').textContent = soundOn ? 'On' : 'Off';
-const notifSound = document.getElementById('notifSound');
-const titleEl = document.getElementById('chatTitle');
-let chatId    = document.getElementById('activeChatId').value === '' ? null : Number(document.getElementById('activeChatId').value);
-let lastMsgCount = 0;
-let lastMsgIds = new Set();
-let initialized = false;
-
-const esc = s => s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const api = (u, o = {}) => fetch(u, o).then(r => r.json());
-
-async function loadChats(){
-  const ul = document.getElementById('chatList');
-  const chats = await api('/api/chats');
-  let html = `
-    <li class="list-group-item d-flex justify-content-between ${chatId===null?'active':''}">
-      <a href="#" class="chat-link flex-grow-1 text-reset text-decoration-none" data-id="global" data-name="Global Chat">🌐 Global Chat</a>
-    </li>`;
-  chats.forEach(c => {
-    html += `
-      <li class="list-group-item d-flex justify-content-between ${c.id===chatId?'active':''}">
-        <a href="#" class="chat-link flex-grow-1 text-reset text-decoration-none" data-id="${c.id}" data-name="${esc(c.name)}">${esc(c.name)}</a>
-        ${c.id!==0?`<button class="btn btn-sm btn-danger btn-circle delete-chat" data-id="${c.id}"><i class="bi bi-trash"></i></button>`:''}
-      </li>`;
-  });
-  ul.innerHTML = html;
-
-  document.querySelectorAll('.delete-chat').forEach(btn => {
-    btn.onclick = () => {
-      if (confirm('Delete chat?')) {
-        fetch(`/api/chats/delete/${btn.dataset.id}`, { method: 'DELETE' })
-          .then(r => r.json()).then(j => {
-            if (j.success) {
-              if (Number(btn.dataset.id) === chatId) {
-                chatId = null;
-                titleEl.textContent = 'Global Chat';
-              }
-              loadChats(); loadMessages(); loadParticipants();
-            } else alert(j.error || 'Error');
-          });
+  <script>
+    function checkAgeGate() {
+      const age = document.getElementById('ageConfirm').value;
+      if (age !== 'yes') {
+        document.getElementById('ageError').style.display = 'block';
+        return false;
       }
-    };
-  });
-
-  document.querySelectorAll('.chat-link').forEach(link => {
-    link.onclick = e => {
-      e.preventDefault();
-      const newId = link.dataset.id === 'global' ? null : Number(link.dataset.id);
-      if (newId === chatId) return;
-      chatId = newId;
-      titleEl.textContent = link.dataset.name;
-      document.querySelectorAll('#chatList .list-group-item').forEach(li => li.classList.remove('active'));
-      link.parentElement.classList.add('active');
-      history.pushState({}, '', chatId === null ? '/' : `/chat/${chatId}`);
-      lastMsgCount = 0;
-      lastMsgIds.clear();
-      initialized = false;
-      loadMessages(); loadParticipants();
-    };
-  });
-}
-
-async function loadMessages(){
-  const url = chatId === null ? '/messages' : `/messages?chat_id=${chatId}`;
-  const box = document.getElementById('messageContainer');
-  const msgs = await api(url);
-  const ids = msgs.map(m => m.id);
-  const diff = msgs.length !== lastMsgCount || ids.some(id => !lastMsgIds.has(id));
-  if (!diff) return;
-
-  box.innerHTML = '';
-  msgs.forEach(m => {
-    box.insertAdjacentHTML('beforeend', `
-      <div class="bubble-wrap ${m.username === me ? 'own' : 'other'}">
-        <div class="message-bubble">${esc(m.content)}</div>
-        <div class="message-meta">${esc(m.username)}</div>
-        ${isAdmin ? `<form method="POST" action="/admin/delete-message/${m.id}" class="d-inline">
-          <button class="btn btn-sm btn-outline-danger mt-1"><i class="bi bi-trash"></i></button>
-        </form>` : ''}
-      </div>`);
-  });
-  box.scrollTop = box.scrollHeight;
-
-  if (initialized && soundOn && msgs.length > lastMsgCount && msgs[msgs.length - 1].username !== me) {
-    notifSound.play().catch(() => {});
-  }
-
-  lastMsgCount = msgs.length;
-  lastMsgIds = new Set(ids);
-  initialized = true;
-}
-
-async function loadParticipants() {
-  const box = document.getElementById('participantBox');
-  if (chatId === null) {
-    box.innerHTML = '';
-    return;
-  }
-
-  const res = await fetch(`/api/chat/${chatId}`);
-  const data = await res.json();
-  if (!data.participants) return;
-
-  const isOwner = data.participants.length > 0 && data.participants[0].id === meId;
-
-  if (!isOwner) {
-    box.innerHTML = '';
-    return;
-  }
-
-  box.innerHTML = `<strong>Group Members:</strong><ul class="list-unstyled">` + 
-    data.participants.map(p => {
-      if (p.id === meId) return `<li>${esc(p.username)} (You)</li>`;
-      return `<li>${esc(p.username)} <button class="btn btn-sm btn-outline-danger btn-circle ms-1" onclick="removeMember(${p.id})"><i class="bi bi-x-lg"></i></button></li>`;
-    }).join('') + `</ul>`;
-}
-
-async function removeMember(userId) {
-  if (!confirm("Remove this user from the chat?")) return;
-  const res = await fetch(`/api/chat/${chatId}/remove/${userId}`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'}
-  });
-  const data = await res.json();
-  if (data.success) {
-    alert(data.message);
-    loadParticipants();
-  } else {
-    alert(data.error || 'Error removing user');
-  }
-}
-
-document.getElementById('messageForm').addEventListener('submit', async e => {
-  e.preventDefault();
-  const inp = document.getElementById('messageInput');
-  const text = inp.value.trim();
-  if (!text) return;
-  const fd = new FormData();
-  fd.append('chat_id', chatId === null ? 0 : chatId);
-  fd.append('message', text);
-  try {
-    const res = await fetch('/send', { method: 'POST', body: fd });
-    const j = await res.json();
-    if (res.ok && j.success) {
-      inp.value = '';
-      lastMsgCount = 0;
-      initialized = true;
-      loadMessages(); loadParticipants();
-    } else {
-      alert(j.error || 'Send failed');
+      return true;
     }
-  } catch (err) {
-    console.error(err);
-    alert('Network error');
-  }
-});
 
-document.getElementById('soundToggle').onclick = () => {
-  soundOn = !soundOn;
-  localStorage.setItem('soundEnabled', soundOn);
-  document.getElementById('soundStatus').textContent = soundOn ? 'On' : 'Off';
-};
-
-loadChats(); loadMessages(); loadParticipants();
-setInterval(loadChats, 5000);
-setInterval(() => { loadMessages(); loadParticipants(); }, 1000);
-
-window.addEventListener('popstate', () => {
-  const path = location.pathname;
-  const newId = path.startsWith('/chat/') ? Number(path.split('/').pop()) : null;
-  document.querySelector(`a.chat-link[data-id="${newId === null ? 'global' : newId}"]`)?.click();
-});
-</script>
-
+  </script>
 </body>
 </html>
