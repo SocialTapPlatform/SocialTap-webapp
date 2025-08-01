@@ -77,17 +77,17 @@ def block_user(viewer_id, sender_id):
         data[str(viewer_id)].append(str(sender_id))
         save_blocked_users(data)
 #countdowns
-@app.route("/countdown")
+@app.route("/")
 def countdown():
     return render_template("thisisacountdown.html")
 
-@app.errorhandler(404)
-def handle_404(e):
-    # If it's an API path, return proper JSON error
-    if request.path.startswith('/api/') or request.path.startswith('/send'):
-        return jsonify({'error': 'Not found'}), 404
-    # Otherwise, fallback to countdown page
-    return redirect('/countdown')
+@app.route("/<path:subpath>")
+
+
+def redirect_to_countdown(subpath):
+
+
+    return redirect("/")
 # Unblock a user
 def unblock_user(viewer_id, sender_id):
     data = load_blocked_users()
