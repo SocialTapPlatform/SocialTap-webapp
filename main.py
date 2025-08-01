@@ -1062,3 +1062,10 @@ def remove_member(chat_id, user_id):
 @login_required
 def fallback():
     return render_template('fallback.html')
+
+
+
+
+@app.route('/minagereq')
+def fallback():
+    return render_template('minimumagerequirementlist.html')
