@@ -1067,5 +1067,5 @@ def fallback():
 
 
 @app.route('/minagereq')
-def fallback():
+def mark():
     return render_template('minimumagerequirementlist.html')
