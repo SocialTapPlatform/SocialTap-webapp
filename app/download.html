@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
 <head>
@@ -10,36 +9,52 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-
 </head>
 <body>
     <div class="container py-5">
         <div class="row justify-content-center">
-            <div class="col-md-8 text-center">
+            <div class="col-md-10 text-center">
                 <h1 class="display-4 mb-4">Download SocialTap Desktop</h1>
-                <p class="lead mb-4">--for Windows and MacOS--</p>
+                <p class="lead mb-4">--for Windows, macOS, and Linux--</p>
 
                 <div class="row g-4 mb-5">
-                    <div class="col-md-6">
+                    <!-- Windows -->
+                    <div class="col-md-4">
                         <div class="card h-100">
                             <div class="card-body">
                                 <i class="bi bi-windows mb-3" style="font-size: 2rem;"></i>
                                 <h3>Windows</h3>
                                 <p>Windows 10 and later</p>
-                                <a href="https://www.dropbox.com/scl/fi/n9tvav5gmo9w8zau761zw/SocialTap-Setup-2.0.0.exe?rlkey=bvc5dxyjc89jaedvuyfpoxbsi&e=1&st=72p60k3a&dl=0" class="btn btn-primary">
+                                <a href="https://www.dropbox.com/scl/fi/lgrx1pmluntfccavr2udy/SocialTap-Setup-3.0.0.exe?rlkey=i7y1hv0l903kec6ajoeyw00cz&st=9cf8l8w4&dl=0" class="btn btn-primary">
                                     <i class="bi bi-download"></i> Download for Windows
                                 </a>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
+
+                    <!-- macOS -->
+                    <div class="col-md-4">
                         <div class="card h-100">
                             <div class="card-body">
                                 <i class="bi bi-apple mb-3" style="font-size: 2rem;"></i>
                                 <h3>macOS</h3>
-                                <p>macOS 10.15 and later</p>
-                                <a href="https://www.dropbox.com/scl/fi/qkrv8x7u1hq77cvfkkhoz/SocialTap-2.0.0.dmg?rlkey=it06vp4hjvppmnes3y13ap017&st=rszqe2al&dl=0" class="btn btn-primary">
+                                <p>Apple Silicon only</p>
+                                <a href="https://www.dropbox.com/scl/fi/yu2zqtdbyzqopzeqmfho4/SocialTap-3.0.0-arm64.dmg?rlkey=anv6wn0esq4n3pysmz58ofwc0&st=k9pbzyon&dl=0" class="btn btn-primary">
                                     <i class="bi bi-download"></i> Download for macOS
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Linux -->
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <i class="bi bi-ubuntu mb-3" style="font-size: 2rem;"></i>
+                                <h3>Linux</h3>
+                                <p>AppImage format</p>
+                                <a href="https://www.dropbox.com/scl/fi/l23vrrtx8js1m9efl3j62/SocialTap-3.0.0-arm64.AppImage?rlkey=rqe0jhdxsv1kvwlzqocgaq72i&st=6df1dwq1&dl=0" class="btn btn-primary">
+                                    <i class="bi bi-download"></i> Download for Linux
                                 </a>
                             </div>
                         </div>
