@@ -61,7 +61,11 @@
     var xhr = new XMLHttpRequest();
     xhr.open('POST', url, true);
     xhr.withCredentials = true;
-    xhr.setRequestHeader('Content-Type', 'application/json');
+
+    var form = new FormData();
+    for (var key in data) {
+      form.append(key, data[key]);
+    }
 
     xhr.onreadystatechange = function() {
       if (xhr.readyState === 4) {
@@ -71,7 +75,7 @@
       }
     };
 
-    xhr.send(JSON.stringify(data));
+    xhr.send(form);
   }
 
   function loadChats() {
@@ -136,7 +140,7 @@
     e.preventDefault();
     var txt = messageInput.value.trim();
     if (!txt) return;
-    xhrPost('/send', { chat_id: currentChatId, content: txt }, function(err, txt) {
+    xhrPost('/send', { chat_id: currentChatId, message: txt }, function(err, txt) {
       if (!err) {
         messageInput.value = '';
         loadMessages();
