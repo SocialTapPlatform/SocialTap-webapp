@@ -41,7 +41,7 @@
   var sendForm   = document.getElementById('sendForm');
   var messageInput = document.getElementById('messageInput');
 
-  var currentChatId = null;
+  var currentChatId = 0;
 
   function xhrGet(url, cb) {
     var xhr = new XMLHttpRequest();
@@ -56,7 +56,6 @@
     xhr.send();
   }
 
-  // 🔥 Fixed: Send JSON, not FormData
   function xhrPost(url, data, cb) {
     var xhr = new XMLHttpRequest();
     xhr.open('POST', url, true);
@@ -100,7 +99,8 @@
   }
 
   function loadMessages() {
-    var url = '/messages' + (currentChatId && currentChatId !== 0 ? '?chat_id=' + currentChatId : '');
+    if (currentChatId === null) return;
+    var url = '/api/messages/' + currentChatId;
     xhrGet(url, function(err, txt) {
       if (err) return;
       try {
