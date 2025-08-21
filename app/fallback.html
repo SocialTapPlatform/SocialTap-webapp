@@ -41,7 +41,7 @@
   var sendForm   = document.getElementById('sendForm');
   var messageInput = document.getElementById('messageInput');
 
-  var currentChatId = 0;
+  var currentChatId = 0; // Global Chat
 
   function xhrGet(url, cb) {
     var xhr = new XMLHttpRequest();
@@ -49,6 +49,7 @@
     xhr.withCredentials = true;
     xhr.onreadystatechange = function() {
       if (xhr.readyState === 4) {
+        console.log("GET", url, "->", xhr.status, xhr.responseText);
         if (xhr.status === 200) cb(null, xhr.responseText);
         else cb(new Error('Status '+xhr.status));
       }
@@ -64,8 +65,9 @@
 
     xhr.onreadystatechange = function() {
       if (xhr.readyState === 4) {
+        console.log("POST", url, data, "->", xhr.status, xhr.responseText);
         if (xhr.status === 200) cb(null, xhr.responseText);
-        else cb(new Error('Status ' + xhr.status + ' - ' + xhr.responseText));
+        else cb(new Error('Status '+xhr.status+' - '+xhr.responseText));
       }
     };
 
@@ -74,10 +76,16 @@
 
   function loadChats() {
     xhrGet('/api/chats', function(err, txt) {
-      if (err) return;
+      if (err) {
+        console.error("Failed to load chats:", err);
+        return;
+      }
       try {
         var chats = JSON.parse(txt);
-      } catch(e) { return; }
+      } catch(e) { 
+        console.error("Chat JSON parse error:", e, txt);
+        return; 
+      }
       chatSelect.innerHTML = '';
       var opt = document.createElement('option');
       opt.value = 0; 
@@ -90,22 +98,23 @@
         o.text = c.name || 'Chat '+c.id;
         chatSelect.appendChild(o);
       }
-      if (currentChatId !== null) {
-        chatSelect.value = currentChatId;
-      } else {
-        chatSelect.value = 0;
-      }
+      chatSelect.value = currentChatId;
     });
   }
 
   function loadMessages() {
-    if (currentChatId === null) return;
-    var url = '/api/messages/' + currentChatId;
+    var url = '/messages' + (currentChatId && currentChatId !== 0 ? '?chat_id=' + currentChatId : '');
     xhrGet(url, function(err, txt) {
-      if (err) return;
+      if (err) {
+        messagesEl.innerHTML = 'Failed to load messages.';
+        return;
+      }
       try {
         var msgs = JSON.parse(txt);
-      } catch(e) { return; }
+      } catch(e) { 
+        console.error("Message JSON parse error:", e, txt);
+        return; 
+      }
       messagesEl.innerHTML = '';
       for (var i = 0; i < msgs.length; i++) {
         var m = msgs[i];
@@ -125,7 +134,7 @@
 
   sendForm.onsubmit = function(e) {
     e.preventDefault();
-    var txt = messageInput.value.replace(/^\s+|\s+$/g,'');
+    var txt = messageInput.value.trim();
     if (!txt) return;
     xhrPost('/send', { chat_id: currentChatId, content: txt }, function(err, txt) {
       if (!err) {
