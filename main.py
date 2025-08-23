@@ -323,18 +323,26 @@ def get_messages():
         if current_user not in chat_room.participants:
             return jsonify({'error': 'Access denied'}), 403
             
-        query = Message.query.filter_by(chat_room_id=chat_id).order_by(Message.timestamp.asc())
+        base_query = Message.query.filter_by(chat_room_id=chat_id)
     else:
         # Get messages for the global chat (messages without a chat_room_id)
-        query = Message.query.filter_by(chat_room_id=None).order_by(Message.timestamp.asc())
+        base_query = Message.query.filter_by(chat_room_id=None)
 
     if fetch_all:
-        messages = query.all()
+        messages = base_query.order_by(Message.timestamp.asc()).all()
     else:
-        # only return last 178
-        messages = query.order_by(Message.timestamp.desc()).limit(178).all()
-        # reverse back into ascending order
-        messages = list(reversed(messages))
+        # last 178, but still sorted ascending
+        subquery = base_query.order_by(Message.timestamp.desc()).limit(178).subquery()
+        messages = Message.query.from_statement(
+            db.select(subquery).order_by(subquery.c.timestamp.asc())
+        ).all()
+
+    return jsonify([{
+        'id': msg.id,
+        'content': msg.content,
+        'username': msg.author.username,
+        'timestamp': msg.timestamp.strftime('%H:%M')
+    } for msg in messages])
 
     return jsonify([{
         'id': msg.id,
