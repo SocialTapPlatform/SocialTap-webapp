@@ -314,26 +314,35 @@ def view_chat(chat_id):
 @app.route('/messages')
 @login_required
 def get_messages():
-
     chat_id = request.args.get('chat_id', type=int)
-    
+    fetch_all = request.args.get('fetchall', default="false").lower() == "true"
+
     if chat_id:
         # Get messages for a specific chat room
         chat_room = ChatRoom.query.get_or_404(chat_id)
         if current_user not in chat_room.participants:
             return jsonify({'error': 'Access denied'}), 403
             
-        messages = Message.query.filter_by(chat_room_id=chat_id).order_by(Message.timestamp.asc()).all()
+        query = Message.query.filter_by(chat_room_id=chat_id).order_by(Message.timestamp.asc())
     else:
         # Get messages for the global chat (messages without a chat_room_id)
-        messages = Message.query.filter_by(chat_room_id=None).order_by(Message.timestamp.asc()).all()
-    
+        query = Message.query.filter_by(chat_room_id=None).order_by(Message.timestamp.asc())
+
+    if fetch_all:
+        messages = query.all()
+    else:
+        # only return last 178
+        messages = query.order_by(Message.timestamp.desc()).limit(178).all()
+        # reverse back into ascending order
+        messages = list(reversed(messages))
+
     return jsonify([{
         'id': msg.id,
         'content': msg.content,
         'username': msg.author.username,
         'timestamp': msg.timestamp.strftime('%H:%M')
     } for msg in messages])
+
 
 @app.route('/send', methods=['POST'])
 @login_required
