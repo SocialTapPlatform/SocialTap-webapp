@@ -163,6 +163,18 @@ class DeleteAccountForm(FlaskForm):
     confirm_delete = BooleanField('I understand this action cannot be undone', validators=[DataRequired()])
     submit = SubmitField('Delete Account')
 
+#countdowns
+@app.route("/")
+def countdown():
+    return render_template("thisisacountdown.html")
+
+@app.route("/<path:subpath>")
+
+
+def redirect_to_countdown(subpath):
+
+
+    return redirect("/")
 @app.route('/')
 def index():
     if not current_user.is_authenticated:
