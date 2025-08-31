@@ -1135,10 +1135,10 @@ def remove_user_badge(user_id):
     if not badge:
         return jsonify({"error": "Badge is required"}), 400
 
-    badges = user.badges or []
-    if badge in badges:
-        badges.remove(badge)
-    user.badges = badges
+    # blah blah blah it didnt work so I am trying this
+    current_badges = user.badges or []
+    user.badges = [b for b in current_badges if b != badge]
+
     db.session.commit()
 
-    return jsonify({"success": True, "badges": badges})
+    return jsonify({"success": True, "badges": user.badges})
