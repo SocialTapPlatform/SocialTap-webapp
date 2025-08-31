@@ -2,187 +2,306 @@
 <html lang="en" data-bs-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SocialTap</title>
-  <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
-  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
-  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="SocialTap">
-
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
   <style>
-    /* Message container styles */
-    #chatContainer {
-      max-height: 60vh;
-      overflow-y: auto;
-      border: 1px solid #444;
-      padding: 1rem;
-      border-radius: 0.5rem;
-      background-color: #1c1c1e;
-    }
-
-    .chat-message {
-      padding: 0.5rem;
-      margin-bottom: 0.5rem;
-      border-bottom: 1px solid #333;
-    }
-
-    .chat-username {
-      font-weight: bold;
-      display: inline-block;
-      margin-right: 0.5rem;
-    }
-
-    .chat-badge {
-      display: inline-block;
-      margin-left: 0.2rem;
-      padding: 0.1rem 0.3rem;
-      font-size: 0.75rem;
-      border-radius: 0.25rem;
-      background-color: #0dcaf0; /* Bootstrap info color */
-      color: #000;
-    }
-
-    .chat-timestamp {
-      font-size: 0.75rem;
-      color: #999;
-      float: right;
-    }
+    /* General dark theme */
+    body { background: #000; color: #fff }
+    .card { background: #111; border: none }
+    .form-control, .btn, .list-group-item { background: #1a1a1a; color: #fff; border: 1px solid #333 }
+    .list-group-item:hover { background: #222 }
+    
+    /* Chat message area */
+    .chat-messages { height: 60vh; overflow-y: auto; padding: 1rem }
+    .bubble-wrap { margin-bottom: .9rem; max-width: 75% }
+    .bubble-wrap.own { margin-left: auto; text-align: right }
+    .bubble-wrap.other { margin-right: auto; text-align: left }
+    
+    /* Message bubbles */
+    .message-bubble { padding: .7rem 1rem; border-radius: 1rem; word-wrap: break-word; display: inline-block; }
+    .own .message-bubble { background: #ff8800; color: #000 }
+    .other .message-bubble { background: #2a2a2a; color: #ff8800 }
+    
+    /* Message meta (username, timestamp, badges) */
+    .message-meta { font-size: .75rem; color: #aaa; margin-top: .2rem }
+    .badge-message { font-size: .65rem; margin-left: 0.2rem; vertical-align: text-top; }
+    
+    .btn-circle { width: 32px; height: 32px; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center }
   </style>
 </head>
-<body>
-  <div class="container py-5">
-    <div class="row justify-content-center">
-      <div class="col-md-8">
+<body data-is-admin="{{ current_user.is_admin()|string }}">
 
-        <!-- Chat Messages Container -->
-        <div id="chatContainer" class="mb-3">
-          <!-- Messages will be dynamically injected here -->
+<div class="container-fluid py-4">
+  <div class="row">
+    <!-- Sidebar: chat list -->
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Chats</h5>
+          <a href="/newchat" class="btn btn-sm btn-primary btn-circle"><i class="bi bi-plus-lg"></i></a>
+        </div>
+        <div class="card-body p-0">
+          <ul class="list-group list-group-flush" id="chatList"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main chat area -->
+    <div class="col-md-9 d-flex flex-column">
+      <div class="card flex-fill">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0" id="chatTitle">Chat</h5>
+          <div class="d-flex gap-2 align-items-center">
+            <span class="badge bg-success">{{ username }}</span>
+            <a href="{{ url_for('profile') }}" class="btn btn-sm btn-outline-secondary btn-circle"><i class="bi bi-person"></i></a>
+            {% if current_user.is_admin() %}
+            <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-outline-primary btn-circle"><i class="bi bi-shield-lock"></i></a>
+            {% endif %}
+            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger btn-circle"><i class="bi bi-box-arrow-right"></i></a>
+            <button id="soundToggle" class="btn btn-sm btn-outline-secondary">Sound: <span id="soundStatus">On</span></button>
+          </div>
         </div>
 
-        <!-- Message Input Form -->
-        <form id="chatForm" class="d-flex">
-          <input type="text" id="messageInput" class="form-control me-2" placeholder="Type your message..." required>
-          <button type="submit" class="btn btn-primary">Send</button>
-        </form>
+        <!-- Chat messages container -->
+        <div class="card-body chat-messages d-flex flex-column" id="messageContainer">
+          <div class="text-muted text-center">Loading…</div>
+        </div>
 
+        <!-- Input form and participants -->
+        <div class="card-footer">
+          <form id="messageForm" class="d-flex gap-2 mb-2">
+            <input id="messageInput" class="form-control" placeholder="Type a message…" required>
+            <button class="btn btn-primary" type="submit"><i class="bi bi-send"></i></button>
+          </form>
+          <div id="participantBox" class="text-center text-muted small"></div>
+        </div>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- Footer -->
-  <footer class="py-3 mt-4">
-    <div class="container text-center">
-      <p class="text-muted small">
-        <a href="{{ url_for('privacy_policy') }}" class="text-decoration-none text-muted me-3">Privacy Policy</a>
-        <a href="{{ url_for('terms_of_service') }}" class="text-decoration-none text-muted">Terms of Service</a>
-        <br><br>
-        <a href="/download" class="text-decoration-none text-muted">Download</a>
-        <br><br>
-        <a href="/apidocs" class="text-decoration-none text-muted">API Docs</a>
-      </p>
-      <p class="text-muted small mb-0">&copy; 2025 SocialTap. All rights reserved, protected by the </p>
-      <a href="https://www.mozilla.org/media/MPL/2.0/index.f75d2927d3c1.txt" class="text-decoration-none text-muted">Mozilla Public License 2</a>
-    </div>
-  </footer>
+<!-- Notification sound -->
+<audio id="notifSound" src="/static/sounds/notification.mp3" preload="auto"></audio>
+<input type="hidden" id="activeChatId" value="{{ active_chat_id if active_chat_id is not none else '' }}">
 
-  <script>
-    // Function to append a single message to the chat container
-    function appendMessage(message) {
-      const container = document.getElementById('chatContainer');
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// -----------------------------
+// Setup and globals
+// -----------------------------
+const isAdmin  = document.body.dataset.isAdmin === 'True';
+const me       = "{{ username }}";
+const meId     = {{ current_user.id }};
+let soundOn    = (localStorage.getItem('soundEnabled') ?? 'true') === 'true';
+document.getElementById('soundStatus').textContent = soundOn ? 'On' : 'Off';
+const notifSound = document.getElementById('notifSound');
+const titleEl = document.getElementById('chatTitle');
+let chatId    = document.getElementById('activeChatId').value === '' ? null : Number(document.getElementById('activeChatId').value);
+let lastMsgCount = 0;
+let lastMsgIds = new Set();
+let initialized = false;
 
-      // Create message wrapper
-      const msgDiv = document.createElement('div');
-      msgDiv.classList.add('chat-message');
+// Escape HTML to prevent XSS
+const esc = s => s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const api = (u, o = {}) => fetch(u, o).then(r => r.json());
 
-      // Create username element
-      const usernameSpan = document.createElement('span');
-      usernameSpan.classList.add('chat-username');
-      usernameSpan.textContent = message.username;
+// -----------------------------
+// Load chat list
+// -----------------------------
+async function loadChats(){
+  const ul = document.getElementById('chatList');
+  const chats = await api('/api/chats');
+  let html = `
+    <li class="list-group-item d-flex justify-content-between ${chatId===null?'active':''}">
+      <a href="#" class="chat-link flex-grow-1 text-reset text-decoration-none" data-id="global" data-name="Global Chat">🌐 Global Chat</a>
+    </li>`;
+  chats.forEach(c => {
+    html += `
+      <li class="list-group-item d-flex justify-content-between ${c.id===chatId?'active':''}">
+        <a href="#" class="chat-link flex-grow-1 text-reset text-decoration-none" data-id="${c.id}" data-name="${esc(c.name)}">${esc(c.name)}</a>
+        ${c.id!==0?`<button class="btn btn-sm btn-danger btn-circle delete-chat" data-id="${c.id}"><i class="bi bi-trash"></i></button>`:''}
+      </li>`;
+  });
+  ul.innerHTML = html;
 
-      // Append badges after username
-      if (message.badges && message.badges.length > 0) {
-        message.badges.forEach(badge => {
-          const badgeSpan = document.createElement('span');
-          badgeSpan.classList.add('chat-badge');
-          badgeSpan.textContent = badge;
-          usernameSpan.appendChild(badgeSpan);
-        });
-      }
-
-      // Create message content element
-      const contentSpan = document.createElement('span');
-      contentSpan.textContent = `: ${message.content}`;
-
-      // Create timestamp element
-      const timeSpan = document.createElement('span');
-      timeSpan.classList.add('chat-timestamp');
-      timeSpan.textContent = message.timestamp;
-
-      // Combine elements
-      msgDiv.appendChild(usernameSpan);
-      msgDiv.appendChild(contentSpan);
-      msgDiv.appendChild(timeSpan);
-
-      // Append to container
-      container.appendChild(msgDiv);
-
-      // Scroll to bottom
-      container.scrollTop = container.scrollHeight;
-    }
-
-    // Function to load messages from API (simulate fetch)
-    async function loadMessages() {
-      try {
-        const response = await fetch('/messages?fetchall=true');
-        const data = await response.json();
-        const container = document.getElementById('chatContainer');
-        container.innerHTML = ''; // Clear previous messages
-
-        data.forEach(msg => {
-          appendMessage(msg);
-        });
-      } catch (err) {
-        console.error('Error fetching messages:', err);
-      }
-    }
-
-    // Load messages when page loads
-    window.addEventListener('DOMContentLoaded', () => {
-      loadMessages();
-    });
-
-    // Handle sending new message
-    document.getElementById('chatForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const input = document.getElementById('messageInput');
-      const content = input.value.trim();
-      if (!content) return;
-
-      try {
-        const response = await fetch('/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: `message=${encodeURIComponent(content)}`
-        });
-        const result = await response.json();
-        if (result.success) {
-          appendMessage({
-            username: result.message.username,
-            content: result.message.content,
-            timestamp: result.message.timestamp,
-            badges: result.message.badges || []
+  // Attach delete chat event
+  document.querySelectorAll('.delete-chat').forEach(btn => {
+    btn.onclick = () => {
+      if (confirm('Delete chat?')) {
+        fetch(`/api/chats/delete/${btn.dataset.id}`, { method: 'DELETE' })
+          .then(r => r.json()).then(j => {
+            if (j.success) {
+              if (Number(btn.dataset.id) === chatId) {
+                chatId = null;
+                titleEl.textContent = 'Global Chat';
+              }
+              loadChats(); loadMessages(); loadParticipants();
+            } else alert(j.error || 'Error');
           });
-          input.value = '';
-        } else {
-          alert(result.error || 'Failed to send message.');
-        }
-      } catch (err) {
-        console.error('Error sending message:', err);
       }
-    });
-  </script>
+    };
+  });
+
+  // Chat selection
+  document.querySelectorAll('.chat-link').forEach(link => {
+    link.onclick = e => {
+      e.preventDefault();
+      const newId = link.dataset.id === 'global' ? null : Number(link.dataset.id);
+      if (newId === chatId) return;
+      chatId = newId;
+      titleEl.textContent = link.dataset.name;
+      document.querySelectorAll('#chatList .list-group-item').forEach(li => li.classList.remove('active'));
+      link.parentElement.classList.add('active');
+      history.pushState({}, '', chatId === null ? '/' : `/chat/${chatId}`);
+      lastMsgCount = 0;
+      lastMsgIds.clear();
+      initialized = false;
+      loadMessages(); loadParticipants();
+    };
+  });
+}
+
+// -----------------------------
+// Load messages and display badges
+// -----------------------------
+async function loadMessages(){
+  const url = chatId === null ? '/messages' : `/messages?chat_id=${chatId}`;
+  const box = document.getElementById('messageContainer');
+  const msgs = await api(url);
+  const ids = msgs.map(m => m.id);
+  const diff = msgs.length !== lastMsgCount || ids.some(id => !lastMsgIds.has(id));
+  if (!diff) return;
+
+  box.innerHTML = '';
+  msgs.forEach(m => {
+    // Render badges as small inline spans
+    let badgesHtml = '';
+    if (Array.isArray(m.badges) && m.badges.length > 0) {
+      badgesHtml = m.badges.map(b => `<span class="badge bg-info badge-message">${esc(b)}</span>`).join(' ');
+    }
+
+    box.insertAdjacentHTML('beforeend', `
+      <div class="bubble-wrap ${m.username === me ? 'own' : 'other'}">
+        <div class="message-bubble">${esc(m.content)}</div>
+        <div class="message-meta">${esc(m.username)} ${badgesHtml}</div>
+        ${isAdmin ? `<form method="POST" action="/admin/delete-message/${m.id}" class="d-inline">
+          <button class="btn btn-sm btn-outline-danger mt-1"><i class="bi bi-trash"></i></button>
+        </form>` : ''}
+      </div>`);
+  });
+
+  box.scrollTop = box.scrollHeight;
+
+  if (initialized && soundOn && msgs.length > lastMsgCount && msgs[msgs.length - 1].username !== me) {
+    notifSound.play().catch(() => {});
+  }
+
+  lastMsgCount = msgs.length;
+  lastMsgIds = new Set(ids);
+  initialized = true;
+}
+
+// -----------------------------
+// Load participants for group chats
+// -----------------------------
+async function loadParticipants() {
+  const box = document.getElementById('participantBox');
+  if (chatId === null) {
+    box.innerHTML = '';
+    return;
+  }
+
+  const res = await fetch(`/api/chat/${chatId}`);
+  const data = await res.json();
+  if (!data.participants) return;
+
+  const isOwner = data.participants.length > 0 && data.participants[0].id === meId;
+  if (!isOwner) {
+    box.innerHTML = '';
+    return;
+  }
+
+  box.innerHTML = `<strong>Group Members:</strong><ul class="list-unstyled">` + 
+    data.participants.map(p => {
+      if (p.id === meId) return `<li>${esc(p.username)} (You)</li>`;
+      return `<li>${esc(p.username)} <button class="btn btn-sm btn-outline-danger btn-circle ms-1" onclick="removeMember(${p.id})"><i class="bi bi-x-lg"></i></button></li>`;
+    }).join('') + `</ul>`;
+}
+
+// -----------------------------
+// Remove a member
+// -----------------------------
+async function removeMember(userId) {
+  if (!confirm("Remove this user from the chat?")) return;
+  const res = await fetch(`/api/chat/${chatId}/remove/${userId}`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'}
+  });
+  const data = await res.json();
+  if (data.success) {
+    alert(data.message);
+    loadParticipants();
+  } else {
+    alert(data.error || 'Error removing user');
+  }
+}
+
+// -----------------------------
+// Send message
+// -----------------------------
+document.getElementById('messageForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const inp = document.getElementById('messageInput');
+  const text = inp.value.trim();
+  if (!text) return;
+  const fd = new FormData();
+  fd.append('chat_id', chatId === null ? 0 : chatId);
+  fd.append('message', text);
+  try {
+    const res = await fetch('/send', { method: 'POST', body: fd });
+    const j = await res.json();
+    if (res.ok && j.success) {
+      inp.value = '';
+      lastMsgCount = 0;
+      initialized = true;
+      loadMessages(); loadParticipants();
+    } else {
+      alert(j.error || 'Send failed');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Network error');
+  }
+});
+
+// -----------------------------
+// Sound toggle
+// -----------------------------
+document.getElementById('soundToggle').onclick = () => {
+  soundOn = !soundOn;
+  localStorage.setItem('soundEnabled', soundOn);
+  document.getElementById('soundStatus').textContent = soundOn ? 'On' : 'Off';
+};
+
+// -----------------------------
+// Initialize
+// -----------------------------
+loadChats(); loadMessages(); loadParticipants();
+setInterval(loadChats, 5000);
+setInterval(() => { loadMessages(); loadParticipants(); }, 1000);
+
+// -----------------------------
+// Handle back/forward navigation
+// -----------------------------
+window.addEventListener('popstate', () => {
+  const path = location.pathname;
+  const newId = path.startsWith('/chat/') ? Number(path.split('/').pop()) : null;
+  document.querySelector(`a.chat-link[data-id="${newId === null ? 'global' : newId}"]`)?.click();
+});
+</script>
+
 </body>
 </html>
