@@ -20,10 +20,11 @@
                 <i class="bi bi-arrow-left"></i> Back to Chat
             </a>
         </div>
-<div class="text-center mt-4">
-  <button id="cleanInvites" class="btn btn-danger">🧹 Delete Expired Invites</button>
-  <div id="cleanupResult" class="mt-2"></div>
-</div>
+
+        <div class="text-center mt-4">
+            <button id="cleanInvites" class="btn btn-danger">🧹 Delete Expired Invites</button>
+            <div id="cleanupResult" class="mt-2"></div>
+        </div>
         
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -64,8 +65,8 @@
             </div>
         </div>
 
-<!-- Change Username Form (Only Admins Can See) -->
-{% if current_user.is_admin() %}
+        <!-- Change Username Form (Admins only) -->
+        {% if current_user.is_admin() %}
         <div class="card mb-4">
             <div class="card-body">
                 <h4>Change Username</h4>
@@ -88,7 +89,31 @@
         </div>
         {% endif %}
 
-
+        <!-- 🎖️ Manage Badges -->
+        {% if current_user.is_admin() %}
+        <div class="card mb-4">
+            <div class="card-body">
+                <h4>Manage User Badges</h4>
+                <form id="badgeForm">
+                    <div class="mb-3">
+                        <label for="badge_user_id" class="form-label">User ID</label>
+                        <input type="number" id="badge_user_id" name="badge_user_id" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="badge_name" class="form-label">Badge Name</label>
+                        <input type="text" id="badge_name" name="badge_name" class="form-control" required>
+                    </div>
+                    <button type="button" id="addBadgeBtn" class="btn btn-success">
+                        <i class="bi bi-plus-circle"></i> Add Badge
+                    </button>
+                    <button type="button" id="removeBadgeBtn" class="btn btn-danger ms-2">
+                        <i class="bi bi-dash-circle"></i> Remove Badge
+                    </button>
+                </form>
+                <div id="badgeResult" class="mt-3"></div>
+            </div>
+        </div>
+        {% endif %}
 
         <!-- Users Table -->
         <div class="table-responsive">
@@ -96,7 +121,7 @@
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Username</th>
+                        <th>Username & Badges</th>
                         <th>Email</th>
                         <th>Last Seen</th>
                         <th>Status</th>
@@ -107,7 +132,16 @@
                     {% for user in users %}
                     <tr data-username="{{ user.username|lower }}" data-email="{{ user.email|lower }}" data-status="{% if user.is_banned %}banned{% elif user.is_admin() %}admin{% elif user.is_online() %}online{% else %}offline{% endif %}">
                         <td>{{ user.id }}</td>
-                        <td>{{ user.username }}</td>
+                        <td>
+                            {{ user.username }}
+                            {% if user.badges %}
+                                <div class="mt-1">
+                                    {% for badge in user.badges %}
+                                        <span class="badge bg-info text-dark">{{ badge }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </td>
                         <td>{{ user.email }}</td>
                         <td>{{ user.last_seen.strftime('%Y-%m-%d %H:%M') if user.last_seen else 'Never' }}</td>
                         <td>
@@ -120,29 +154,29 @@
                             {% else %}
                             <span class="badge bg-secondary">Offline</span>
                             {% endif %}
-                        </td><td>
-  {% if not user.is_admin() and user.id != current_user.id %}
-    {% if user.is_banned %}
-    <form action="{{ url_for('unban_user', user_id=user.id) }}" method="post" style="display: inline;">
-      <button type="submit" class="btn btn-sm btn-success">
-        <i class="bi bi-unlock"></i> Unban
-      </button>
-    </form>
-    {% else %}
-    <form action="{{ url_for('ban_user', user_id=user.id) }}" method="post" style="display: inline;">
-      <button type="submit" class="btn btn-sm btn-danger">
-        <i class="bi bi-slash-circle"></i> Ban
-      </button>
-    </form>
-    {% endif %}
-
-    <form action="{{ url_for('delete_user', user_id=user.id) }}" method="post" style="display: inline; margin-left: 5px;">
-      <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this user?');">
-        <i class="bi bi-trash"></i> Delete
-      </button>
-    </form>
-  {% endif %}
-</td>
+                        </td>
+                        <td>
+                            {% if not user.is_admin() and user.id != current_user.id %}
+                                {% if user.is_banned %}
+                                <form action="{{ url_for('unban_user', user_id=user.id) }}" method="post" style="display: inline;">
+                                    <button type="submit" class="btn btn-sm btn-success">
+                                        <i class="bi bi-unlock"></i> Unban
+                                    </button>
+                                </form>
+                                {% else %}
+                                <form action="{{ url_for('ban_user', user_id=user.id) }}" method="post" style="display: inline;">
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        <i class="bi bi-slash-circle"></i> Ban
+                                    </button>
+                                </form>
+                                {% endif %}
+                                <form action="{{ url_for('delete_user', user_id=user.id) }}" method="post" style="display: inline; margin-left: 5px;">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this user?');">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -184,7 +218,6 @@
                     }
                 });
                 
-                // Show or hide "no results" message
                 if (visibleCount === 0) {
                     noResults.classList.remove('d-none');
                 } else {
@@ -201,30 +234,65 @@
                 filterTable();
             });
         });
+
+        // 🎖️ Badge management logic
+        document.addEventListener('DOMContentLoaded', function () {
+            const addBtn = document.getElementById('addBadgeBtn');
+            const removeBtn = document.getElementById('removeBadgeBtn');
+            const resultBox = document.getElementById('badgeResult');
+
+            async function manageBadge(action) {
+                const userId = document.getElementById('badge_user_id').value;
+                const badge = document.getElementById('badge_name').value;
+
+                if (!userId || !badge) {
+                    resultBox.innerHTML = `<div class="alert alert-warning">User ID and Badge are required.</div>`;
+                    return;
+                }
+
+                try {
+                    const res = await fetch(`/api/user/${userId}/badges/${action}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ badge })
+                    });
+                    const data = await res.json();
+
+                    if (data.success) {
+                        resultBox.innerHTML = `<div class="alert alert-success">✅ Badge updated. Current badges: ${data.badges.join(", ")}</div>`;
+                    } else {
+                        resultBox.innerHTML = `<div class="alert alert-danger">❌ ${data.error}</div>`;
+                    }
+                } catch (err) {
+                    resultBox.innerHTML = `<div class="alert alert-danger">Network error.</div>`;
+                }
+            }
+
+            addBtn.addEventListener('click', () => manageBadge('add'));
+            removeBtn.addEventListener('click', () => manageBadge('remove'));
+        });
+
+        // Delete expired invites
+        document.getElementById('cleanInvites').addEventListener('click', async () => {
+            const resultBox = document.getElementById('cleanupResult');
+            resultBox.innerText = "Cleaning expired invites...";
+
+            try {
+                const res = await fetch('/admin/delete-expired-invites', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    resultBox.innerHTML = `<div class="alert alert-success">✅ Deleted ${data.deleted} expired invite(s).</div>`;
+                } else {
+                    resultBox.innerHTML = `<div class="alert alert-danger">❌ Error: ${data.error}</div>`;
+                }
+            } catch (err) {
+                resultBox.innerHTML = `<div class="alert alert-danger">Network error.</div>`;
+            }
+        });
     </script>
-    <script>
-document.getElementById('cleanInvites').addEventListener('click', async () => {
-  const resultBox = document.getElementById('cleanupResult');
-  resultBox.innerText = "Cleaning expired invites...";
-
-  try {
-    const res = await fetch('/admin/delete-expired-invites', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-
-    const data = await res.json();
-    if (data.success) {
-      resultBox.innerHTML = `<div class="alert alert-success">✅ Deleted ${data.deleted} expired invite(s).</div>`;
-    } else {
-      resultBox.innerHTML = `<div class="alert alert-danger">❌ Error: ${data.error}</div>`;
-    }
-  } catch (err) {
-    resultBox.innerHTML = `<div class="alert alert-danger">Network error.</div>`;
-  }
-});
-</script>
 </body>
 </html>
