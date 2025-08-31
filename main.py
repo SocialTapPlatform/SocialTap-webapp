@@ -338,18 +338,20 @@ def get_messages():
         ).all()
 
     return jsonify([{
-        'id': msg.id,
-        'content': msg.content,
-        'username': msg.author.username,
-        'timestamp': msg.timestamp.strftime('%H:%M')
-    } for msg in messages])
+    'id': msg.id,
+    'content': msg.content,
+    'username': msg.author.username,
+    'timestamp': msg.timestamp.strftime('%H:%M'),
+    'badges': msg.author.badges or []
+} for msg in messages])
 
     return jsonify([{
-        'id': msg.id,
-        'content': msg.content,
-        'username': msg.author.username,
-        'timestamp': msg.timestamp.strftime('%H:%M')
-    } for msg in messages])
+    'id': msg.id,
+    'content': msg.content,
+    'username': msg.author.username,
+    'timestamp': msg.timestamp.strftime('%H:%M'),
+    'badges': msg.author.badges or []
+} for msg in messages])
 
 
 @app.route('/send', methods=['POST'])
@@ -421,9 +423,10 @@ def get_users():
     ).all()
     
     return jsonify([{
-        'id': user.id,
-        'username': user.username
-    } for user in online_users])
+    'id': user.id,
+    'username': user.username,
+    'badges': user.badges or []
+} for user in online_users])
 
 @app.route('/api/chats')
 @login_required
