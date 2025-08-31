@@ -139,9 +139,9 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Log In')
 
 class RegisterForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired(), Length(min=3, max=64)])
-    email = StringField('Email', validators=[DataRequired(), Email()])
-    password = PasswordField('Password', validators=[DataRequired(), Length(min=6)])
+    username = StringField('Username', validators=[DataRequired(), Length(min=3, max=15)])
+    email = StringField('Email', validators=[DataRequired(), Email(), Length(min=3, max=70)])
+    password = PasswordField('Password', validators=[DataRequired(), Length(min=6, max=30)])
     submit = SubmitField('Register')
 
     def validate_username(self, username):
