@@ -1086,3 +1086,55 @@ def fallback():
 @app.route('/minagereq')
 def mark():
     return render_template('minimumagerequirementlist.html')
+
+
+#User badges support because a legacy user told me it'd be pretty cool to add them ;)
+@app.route('/api/user/<int:user_id>/badges', methods=['GET'])
+@login_required
+def get_user_badges(user_id):
+    user = User.query.get_or_404(user_id)
+    return jsonify({"badges": user.badges or []})
+
+
+@app.route('/api/user/<int:user_id>/badges/add', methods=['POST'])
+@login_required
+def add_user_badge(user_id):
+    if not current_user.is_admin():
+        return jsonify({"error": "Unauthorized"}), 403
+
+    user = User.query.get_or_404(user_id)
+    data = request.get_json() or {}
+    badge = data.get("badge")
+
+    if not badge:
+        return jsonify({"error": "Badge is required"}), 400
+
+    badges = user.badges or []
+    if badge not in badges:
+        badges.append(badge)
+    user.badges = badges
+    db.session.commit()
+
+    return jsonify({"success": True, "badges": badges})
+
+
+@app.route('/api/user/<int:user_id>/badges/remove', methods=['POST'])
+@login_required
+def remove_user_badge(user_id):
+    if not current_user.is_admin():
+        return jsonify({"error": "Unauthorized"}), 403
+
+    user = User.query.get_or_404(user_id)
+    data = request.get_json() or {}
+    badge = data.get("badge")
+
+    if not badge:
+        return jsonify({"error": "Badge is required"}), 400
+
+    badges = user.badges or []
+    if badge in badges:
+        badges.remove(badge)
+    user.badges = badges
+    db.session.commit()
+
+    return jsonify({"success": True, "badges": badges})
