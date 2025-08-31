@@ -1,11 +1,10 @@
-
 from datetime import datetime
 from app import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from cryptography.fernet import Fernet
 import os
-import secrets 
+
 # Initialize encryption key from environment variable
 ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY')
 if not ENCRYPTION_KEY:
@@ -17,7 +16,8 @@ if not ENCRYPTION_KEY:
 cipher_suite = Fernet(ENCRYPTION_KEY if isinstance(ENCRYPTION_KEY, bytes) else ENCRYPTION_KEY.encode())
 
 # Association table for many-to-many relationship between ChatRoom and User
-chat_participants = db.Table('chat_participants',
+chat_participants = db.Table(
+    'chat_participants',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
     db.Column('chat_room_id', db.Integer, db.ForeignKey('chat_room.id'), primary_key=True)
 )
@@ -30,19 +30,23 @@ class User(UserMixin, db.Model):
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     is_google_user = db.Column(db.Boolean, default=False)
     is_banned = db.Column(db.Boolean, default=False)
+    badges = db.Column(db.JSON, default=list)   # NEW badges field
     messages = db.relationship('Message', backref='author', lazy='dynamic')
-    
+
     # Relationship with ChatRoom
-    chats = db.relationship('ChatRoom', secondary=chat_participants, 
-                           backref=db.backref('participants', lazy='dynamic'), 
-                           lazy='dynamic')
+    chats = db.relationship(
+        'ChatRoom',
+        secondary=chat_participants,
+        backref=db.backref('participants', lazy='dynamic'),
+        lazy='dynamic'
+    )
 
     @property
     def email(self):
         try:
             if self._email:
                 return cipher_suite.decrypt(self._email.encode()).decode()
-        except:
+        except Exception:
             return None
         return None
 
@@ -56,18 +60,21 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
-        
+
     def is_online(self):
         now = datetime.utcnow()
         delta = now - self.last_seen if self.last_seen else None
-        # Consider a user online if they've been active in the last 5 minutes
-        return delta and delta.total_seconds() < 300
-        
+        return delta and delta.total_seconds() < 300  # 5 minutes
+
     def is_admin(self):
         # Check if the user's email is in admins.txt file
         try:
             with open('admins.txt', 'r') as f:
-                admin_emails = [line.strip() for line in f if line.strip() and not line.strip().startswith('#')]
+                admin_emails = [
+                    line.strip()
+                    for line in f
+                    if line.strip() and not line.strip().startswith('#')
+                ]
                 return self.email in admin_emails
         except Exception as e:
             print(f"Error checking admin status: {str(e)}")
@@ -86,7 +93,14 @@ class ChatRoom(db.Model):
             'name': self.name,
             'is_private': self.is_private,
             'created_at': self.created_at.strftime('%Y-%m-%d %H:%M'),
-            'participants': [{'id': user.id, 'username': user.username} for user in self.participants]
+            'participants': [
+                {
+                    'id': user.id,
+                    'username': user.username,
+                    'badges': user.badges or []  # include badges when serializing
+                }
+                for user in self.participants
+            ]
         }
 
 class Message(db.Model):
@@ -109,8 +123,6 @@ class Report(db.Model):
     reporter = db.relationship('User', foreign_keys=[reporter_id])
     reported_user = db.relationship('User', foreign_keys=[reported_user_id])
     message = db.relationship('Message')
-
-
 
 class GroupInvite(db.Model):
     id = db.Column(db.Integer, primary_key=True)
