@@ -11,65 +11,63 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="SocialTap">
+
+  <style>
+    /* Message container styles */
+    #chatContainer {
+      max-height: 60vh;
+      overflow-y: auto;
+      border: 1px solid #444;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      background-color: #1c1c1e;
+    }
+
+    .chat-message {
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+      border-bottom: 1px solid #333;
+    }
+
+    .chat-username {
+      font-weight: bold;
+      display: inline-block;
+      margin-right: 0.5rem;
+    }
+
+    .chat-badge {
+      display: inline-block;
+      margin-left: 0.2rem;
+      padding: 0.1rem 0.3rem;
+      font-size: 0.75rem;
+      border-radius: 0.25rem;
+      background-color: #0dcaf0; /* Bootstrap info color */
+      color: #000;
+    }
+
+    .chat-timestamp {
+      font-size: 0.75rem;
+      color: #999;
+      float: right;
+    }
+  </style>
 </head>
 <body>
   <div class="container py-5">
     <div class="row justify-content-center">
-      <div class="col-md-6">
-        <div class="card">
-          <div class="card-header">
-            <h4 class="mb-0">Login</h4>
-          </div>
-          <div class="card-body">
-            {% with messages = get_flashed_messages() %}
-              {% if messages %}
-                {% for message in messages %}
-                  <div class="alert alert-info">{{ message }}</div>
-                {% endfor %}
-              {% endif %}
-            {% endwith %}
-            
-            <form method="POST" action="{{ url_for('login') }}" onsubmit="return checkAgeGate();">
-              {{ form.hidden_tag() }}
-              <div class="mb-3">
-                {{ form.email.label(class="form-label") }}
-                {{ form.email(class="form-control") }}
-                {% for error in form.email.errors %}
-                  <div class="text-danger">{{ error }}</div>
-                {% endfor %}
-              </div>
-              <div class="mb-3">
-                {{ form.password.label(class="form-label") }}
-                {{ form.password(class="form-control") }}
-                {% for error in form.password.errors %}
-                  <div class="text-danger">{{ error }}</div>
-                {% endfor %}
-              </div>
+      <div class="col-md-8">
 
-              <!-- Age confirmation -->
-              <div class="mb-3">
-                <label for="ageConfirm" class="form-label">Do you meet the <a href="/minagereq">minimum age requirements for your country</a>?</label>
-                <select id="ageConfirm" class="form-control" required>
-                  <option value="">-- Please Confirm --</option>
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
-                </select>
-                <div id="ageError" class="text-danger" style="display:none;">You must meet the minimum age requirement in your respective country.</div>
-              </div>
-
-              {{ form.submit(class="btn btn-primary") }}
-            </form>
-
-            <div class="text-center my-3">
-              <a href="{{ url_for('google_auth.login') }}" class="btn btn-outline-primary w-100">
-                <img src="{{ url_for('static', filename='images/googlelogin.png') }}" alt="Google Logo" style="height: 18px; margin-right: 8px;">
-                Sign in with Google
-              </a>
-              <hr>
-              <p>Don't have an account? <a href="{{ url_for('register') }}">Register here</a></p>
-            </div>
-          </div>
+        <!-- Chat Messages Container -->
+        <div id="chatContainer" class="mb-3">
+          <!-- Messages will be dynamically injected here -->
         </div>
+
+        <!-- Message Input Form -->
+        <form id="chatForm" class="d-flex">
+          <input type="text" id="messageInput" class="form-control me-2" placeholder="Type your message..." required>
+          <button type="submit" class="btn btn-primary">Send</button>
+        </form>
+
       </div>
     </div>
   </div>
@@ -91,15 +89,100 @@
   </footer>
 
   <script>
-    function checkAgeGate() {
-      const age = document.getElementById('ageConfirm').value;
-      if (age !== 'yes') {
-        document.getElementById('ageError').style.display = 'block';
-        return false;
+    // Function to append a single message to the chat container
+    function appendMessage(message) {
+      const container = document.getElementById('chatContainer');
+
+      // Create message wrapper
+      const msgDiv = document.createElement('div');
+      msgDiv.classList.add('chat-message');
+
+      // Create username element
+      const usernameSpan = document.createElement('span');
+      usernameSpan.classList.add('chat-username');
+      usernameSpan.textContent = message.username;
+
+      // Append badges after username
+      if (message.badges && message.badges.length > 0) {
+        message.badges.forEach(badge => {
+          const badgeSpan = document.createElement('span');
+          badgeSpan.classList.add('chat-badge');
+          badgeSpan.textContent = badge;
+          usernameSpan.appendChild(badgeSpan);
+        });
       }
-      return true;
+
+      // Create message content element
+      const contentSpan = document.createElement('span');
+      contentSpan.textContent = `: ${message.content}`;
+
+      // Create timestamp element
+      const timeSpan = document.createElement('span');
+      timeSpan.classList.add('chat-timestamp');
+      timeSpan.textContent = message.timestamp;
+
+      // Combine elements
+      msgDiv.appendChild(usernameSpan);
+      msgDiv.appendChild(contentSpan);
+      msgDiv.appendChild(timeSpan);
+
+      // Append to container
+      container.appendChild(msgDiv);
+
+      // Scroll to bottom
+      container.scrollTop = container.scrollHeight;
     }
 
+    // Function to load messages from API (simulate fetch)
+    async function loadMessages() {
+      try {
+        const response = await fetch('/messages?fetchall=true');
+        const data = await response.json();
+        const container = document.getElementById('chatContainer');
+        container.innerHTML = ''; // Clear previous messages
+
+        data.forEach(msg => {
+          appendMessage(msg);
+        });
+      } catch (err) {
+        console.error('Error fetching messages:', err);
+      }
+    }
+
+    // Load messages when page loads
+    window.addEventListener('DOMContentLoaded', () => {
+      loadMessages();
+    });
+
+    // Handle sending new message
+    document.getElementById('chatForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = document.getElementById('messageInput');
+      const content = input.value.trim();
+      if (!content) return;
+
+      try {
+        const response = await fetch('/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `message=${encodeURIComponent(content)}`
+        });
+        const result = await response.json();
+        if (result.success) {
+          appendMessage({
+            username: result.message.username,
+            content: result.message.content,
+            timestamp: result.message.timestamp,
+            badges: result.message.badges || []
+          });
+          input.value = '';
+        } else {
+          alert(result.error || 'Failed to send message.');
+        }
+      } catch (err) {
+        console.error('Error sending message:', err);
+      }
+    });
   </script>
 </body>
 </html>
