@@ -251,19 +251,19 @@ def register():
         # Max length check
         if len(username) > 15:
             logging.warning(f"Blocked registration attempt (too long): {username}")
-            return redirect('https://http.cat/images/413.jpg')
+            return redirect('https://socialtap.social/regreq')
 
         # Invalid character check (only a-z, A-Z, 0-9, _)
         if not re.match(r'^[a-zA-Z0-9_]+$', username):
             logging.warning(f"Blocked registration attempt (invalid characters): {username}")
-            return redirect('https://http.cat/400')
+            return redirect('https://socialtap.social/regreq')
 
         # Blacklist check (case insensitive)
         lower_username = username.lower()
         for word in BLACKLIST_WORDS:
             if word in lower_username:
                 logging.warning(f"Blocked registration attempt (blacklisted word): {username}")
-                return redirect('https://http.cat/403')
+                return redirect('https://socialtap.social/regreq')
 
         try:
             user = User(username=username)
@@ -1085,7 +1085,9 @@ def fallback():
     return render_template('fallback.html')
 
 
-
+@app.route('/regreq')
+def registrationrequirements():
+    return render_template('regreq.html')
 
 @app.route('/minagereq')
 def mark():
