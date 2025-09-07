@@ -10,19 +10,18 @@
     .endpoint { margin-bottom: 2rem; }
     .method { font-weight: bold; }
     code { background-color: #f8f9fa; padding: 0.2em 0.4em; border-radius: 4px; }
-  
   </style>
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-<meta name="apple-mobile-web-app-capable" content="no">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="SocialTap - API Docs">
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="apple-mobile-web-app-capable" content="no">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="SocialTap - API Docs">
 </head>
 <body>
-    <div class="text-center mt-4">
-  <a href="/" class="btn btn-primary rounded-pill px-4">Back to SocialTap</a>
-</div>
+  <div class="text-center mt-4">
+    <a href="/" class="btn btn-primary rounded-pill px-4">Back to SocialTap</a>
+  </div>
   <div class="container">
     <h1 class="mb-4">SocialTap API Documentation</h1>
 
@@ -38,7 +37,14 @@
 
     <div class="endpoint">
       <h5><span class="method text-success">GET</span> /messages?chat_id=&lt;int:chat_id&gt;</h5>
-      <p>Returns all messages in a given chat.</p>
+      <p>Returns all messages in a given chat. Please make sure you include badge support.</p>
+            <p><strong>Body:</strong></p>
+      <pre>{
+        "badges": [Testbadge],
+    "content": "Testmessage",
+    "id": 18237,
+    "timestamp": "Not important nor accurate. When it does start getting accurate, we will put a banner on this API page.",
+    "username": "AppleTest"}</pre>
     </div>
 
     <div class="endpoint">
@@ -70,40 +76,40 @@
       <h5><span class="method text-primary">POST</span> /api/user/offline</h5>
       <p>Marks the current user as offline. Required when the client is closing.</p>
     </div>
-  </div>
 
-      <div class="endpoint">
+    <div class="endpoint">
       <h5><span class="method text-primary">POST</span> /api/login</h5>
       <p>Authenticates a user with email and password. Accepts JSON or form-encoded data.</p>
-     <pre><code>{
+      <pre><code>{
   "email": "user@example.com",
   "password": "your_password"
 }</code></pre>
-  <p><strong>Success Response:</strong></p>
-  <pre><code>{
+      <p><strong>Success Response:</strong></p>
+      <pre><code>{
   "success": true,
   "username": "yourUsername",
   "user_id": 1
 }</code></pre>
-  <p><strong>Error Response (Invalid credentials):</strong></p>
-  <pre><code>{
+      <p><strong>Error Response (Invalid credentials):</strong></p>
+      <pre><code>{
   "error": "Invalid credentials"
 }</code></pre>
-</div>
-      <div class="endpoint">
-  <h5><span class="method text-primary">POST</span> /api/logout</h5>
-  <p>Logs out the current authenticated user and clears their session. It also calls the same thing /api/user/offline does.</p>
-  <p><strong>Success Response:</strong></p>
-  <pre><code>{
+    </div>
+
+    <div class="endpoint">
+      <h5><span class="method text-primary">POST</span> /api/logout</h5>
+      <p>Logs out the current authenticated user and clears their session. It also calls the same thing /api/user/offline does.</p>
+      <p><strong>Success Response:</strong></p>
+      <pre><code>{
   "success": true,
   "message": "Logged out successfully"
 }</code></pre>
-  <p><strong>Error Response:</strong></p>
-  <pre><code>{
+      <p><strong>Error Response:</strong></p>
+      <pre><code>{
   "error": "Logout failed"
 }</code></pre>
-</div>
+    </div>
 
-
+  </div>
 </body>
 </html>
