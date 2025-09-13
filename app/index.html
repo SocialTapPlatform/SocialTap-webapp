@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF--8">
   <title>SocialTap</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
@@ -36,7 +36,6 @@
 
 <div class="container-fluid py-4">
   <div class="row">
-    <!-- Sidebar: chat list -->
     <div class="col-md-3">
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -49,7 +48,6 @@
       </div>
     </div>
 
-    <!-- Main chat area -->
     <div class="col-md-9 d-flex flex-column">
       <div class="card flex-fill">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -65,12 +63,10 @@
           </div>
         </div>
 
-        <!-- Chat messages container -->
         <div class="card-body chat-messages d-flex flex-column" id="messageContainer">
           <div class="text-muted text-center">Loading…</div>
         </div>
 
-        <!-- Input form and participants -->
         <div class="card-footer">
           <form id="messageForm" class="d-flex gap-2 mb-2">
             <input id="messageInput" class="form-control" placeholder="Type a message…" required>
@@ -83,7 +79,6 @@
   </div>
 </div>
 
-<!-- Notification sound -->
 <audio id="notifSound" src="/static/sounds/notification.mp3" preload="auto"></audio>
 <input type="hidden" id="activeChatId" value="{{ active_chat_id if active_chat_id is not none else '' }}">
 
@@ -99,7 +94,7 @@ let soundOn    = (localStorage.getItem('soundEnabled') ?? 'true') === 'true';
 document.getElementById('soundStatus').textContent = soundOn ? 'On' : 'Off';
 const notifSound = document.getElementById('notifSound');
 const titleEl = document.getElementById('chatTitle');
-let chatId    = document.getElementById('activeChatId').value === '' ? null : Number(document.getElementById('activeChatId').value);
+let chatId     = document.getElementById('activeChatId').value === '' ? null : Number(document.getElementById('activeChatId').value);
 let lastMsgCount = 0;
 let lastMsgIds = new Set();
 let initialized = false;
@@ -180,7 +175,17 @@ async function loadMessages(){
     // Render badges as small inline spans
     let badgesHtml = '';
     if (Array.isArray(m.badges) && m.badges.length > 0) {
-      badgesHtml = m.badges.map(b => `<span class="badge bg-info badge-message">${esc(b)}</span>`).join(' ');
+      badgesHtml = m.badges.map(b => {
+        if (b.startsWith('%#') && b.length > 8) {
+          const colorCode = b.substring(2, 8);
+          const badgeText = b.substring(9);
+          if (/^[0-9a-fA-F]{6}$/.test(colorCode)) {
+            return `<span class="badge badge-message" style="background-color: #${colorCode};">${esc(badgeText)}</span>`;
+          }
+        }
+        // Fallback to default badge style
+        return `<span class="badge bg-info badge-message">${esc(b)}</span>`;
+      }).join(' ');
     }
 
     box.insertAdjacentHTML('beforeend', `
