@@ -1144,3 +1144,16 @@ def remove_user_badge(user_id):
     db.session.commit()
 
     return jsonify({"success": True, "badges": user.badges})
+
+
+@app.route('/mpartners')
+def media():
+    return render_template('mpartners/index.html')
+
+@app.route('/mpartners/join')
+def mediajoin():
+    return render_template('mpartners/steps.html')
+
+@app.route('/mpartners/test')
+def mediatest():
+    return render_template('mpartners/test.html')
