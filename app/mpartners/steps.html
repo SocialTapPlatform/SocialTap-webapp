@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Before You Begin — SocialTap Media Partner</title>
+<style>
+  body {
+    margin:0;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background:#000;
+    color:#fff;
+  }
+  .container {
+    max-width: 800px;
+    margin:0 auto;
+    padding:40px 20px;
+  }
+  .step {
+    min-height: 90vh;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    text-align:center;
+    scroll-snap-align:start;
+  }
+  .step h2 {
+    color:#ff7a00;
+    font-size:28px;
+    margin-bottom:16px;
+  }
+  .step p {
+    font-size:18px;
+    color:#ddd;
+    max-width:600px;
+    margin-bottom:24px;
+  }
+  button.next {
+    background:#ff7a00;
+    border:none;
+    border-radius:999px;
+    padding:12px 24px;
+    color:#000;
+    font-weight:700;
+    font-size:16px;
+    cursor:pointer;
+    transition: background 0.2s;
+  }
+  button.next:hover {
+    background:#ffa64d;
+  }
+  section {
+    scroll-snap-type:y mandatory;
+    overflow-y:scroll;
+    height:100vh;
+  }
+</style>
+</head>
+<body>
+  <section id="steps">
+    <div class="step" id="step1">
+      <h2>Step 1</h2>
+      <p>Make sure your username is similar or the same as your social media page.</p>
+      <button class="next" onclick="goTo('step2')">Next</button>
+    </div>
+
+    <div class="step" id="step2">
+      <h2>Step 2</h2>
+      <p>Your social media page has to be at least 7 months old.</p>
+      <button class="next" onclick="goTo('step3')">Next</button>
+    </div>
+
+    <div class="step" id="step3">
+      <h2>Step 3</h2>
+      <p>Make sure you have at least 500 followers!</p>
+      <button class="next" onclick="goTo('step4')">Next</button>
+    </div>
+
+    <div class="step" id="step4">
+      <h2>Step 4</h2>
+      <p>You must provide identity soon. Take a screenshot of your "creator dashboard" and the content page on your creator dashboard.</p>
+      <button class="next" onclick="goTo('step5')">Next</button>
+    </div>
+
+    <div class="step" id="step5">
+      <h2>Step 5</h2>
+      <p>Now, just take the test.</p>
+      <button class="next" onclick="window.location.href='/mpartners/test'">Go to Test</button>
+    </div>
+  </section>
+
+<script>
+  function goTo(id){
+    document.getElementById(id).scrollIntoView({behavior:"smooth"});
+  }
+</script>
+</body>
+</html>

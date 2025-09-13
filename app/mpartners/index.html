@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SocialTap — Media Partner Program</title>
+<link rel="icon" href="st.png" />
+<style>
+  :root{
+    --bg: #000;
+    --accent: #ff7a00;
+    --muted: #9a9a9a;
+    --card: #0a0a0a;
+  }
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:#fff;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:28px;
+  }
+
+  .container {
+    width:100%;
+    max-width:900px;
+    text-align:center;
+  }
+
+  h1{
+    margin:0 0 8px;
+    color:var(--accent);
+    font-size:28px;
+  }
+  p.lead{
+    margin:0 0 20px;
+    color:var(--muted);
+    max-width:78ch;
+    margin-left:auto;
+    margin-right:auto;
+  }
+
+
+  .hero-badge {
+    display:inline-block;
+    background:#b87333;
+    color:#fff;
+    padding:10px 18px;
+    border-radius:999px;
+    font-weight:700;
+    box-shadow: 0 8px 30px rgba(43,111,179,0.18);
+    margin-bottom:18px;
+    font-size:15px;
+  }
+
+  /* Row of colored tier badges */
+  .badges {
+    display:flex;
+    gap:12px;
+    justify-content:center;
+    flex-wrap:wrap;
+    margin:18px 0 22px;
+  }
+  .badge {
+    padding:8px 14px;
+    border-radius:999px;
+    font-weight:700;
+    font-size:13px;
+    color:#000;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:120px;
+  }
+  .badge--bronze { background: #b87333; color: #000; } /* Bronze */
+  .badge--silver { background: #C0C0C0; color: #000; } /* Silver */
+  .badge--gold   { background: #f9c311; color: #000; } /* Gold */
+  .badge--diamond{ background: #b9f2ff; color: #000; } /* Diamond (light cyan) */
+  .badge--ruby   { background: #E0115F; color: #fff; } /* Ruby */
+
+  /* Card */
+  .card{
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02));
+    padding:20px;
+    border-radius:12px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+    margin-top:16px;
+  }
+
+  .btn {
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    border:0;
+    padding:10px 18px;
+    background:var(--accent);
+    color:#000;
+    font-weight:700;
+    border-radius:999px;
+    text-decoration:none;
+    cursor:pointer;
+    box-shadow: 0 8px 20px rgba(255,122,0,0.12);
+  }
+  .btn.secondary {
+    background:transparent;
+    color:var(--muted);
+    border:1px solid rgba(255,255,255,0.05);
+    border-radius:8px;
+    padding:8px 12px;
+  }
+
+  /* Terms dropdown */
+  .terms {
+    margin-top:18px;
+    text-align:left;
+    color:var(--muted);
+    font-size:14px;
+  }
+  .terms pre {
+    white-space:pre-wrap;
+    color:#ddd;
+    background: transparent;
+    margin:6px 0 0 0;
+  }
+  .terms summary {
+    list-style:none;
+    cursor:pointer;
+    padding:10px 12px;
+    border-radius:8px;
+    background: rgba(255,255,255,0.01);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    color:var(--muted);
+    font-weight:600;
+  }
+  .small {
+    color:var(--muted);
+    font-size:13px;
+    margin-top:10px;
+  }
+
+  /* Responsive */
+  @media (max-width:600px){
+    .badge { min-width:100px; font-size:12px; padding:7px 10px; }
+    .hero-badge { font-size:14px; padding:9px 14px; }
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>SocialTap Media Partner Program</h1>
+    <p class="lead">Join SocialTap's Media Partner Program to get recognized on your profile with tiered badges for creators who help spread the word. Virtual badges only — no money, no products.</p>
+
+
+    <div>
+      <div class="hero-badge" aria-hidden="true">Media Partner — Tier 1</div>
+    </div>
+
+    <div class="card" role="region" aria-label="Program quick summary">
+      <p style="margin:0 0 12px; font-weight:700;">Quick Summary</p>
+      <p style="margin:0 0 12px; color:var(--muted);">Anyone aged 13+ with at least 500 followers can apply. Badges are virtual recognition shown on your SocialTap profile. Tiers (from entry to top) are: Bronze, Silver, Gold, Diamond, Ruby.</p>
+
+      <div class="badges" aria-hidden="false">
+        <div class="badge badge--bronze">Bronze — Tier 1</div>
+        <div class="badge badge--silver">Silver — Tier 2</div>
+        <div class="badge badge--gold">Gold — Tier 3</div>
+        <div class="badge badge--diamond">Diamond — Tier 4</div>
+        <div class="badge badge--ruby">Ruby — Tier 5</div>
+      </div>
+
+
+
+      <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+        <a class="btn" href="/mpartners/join">Join as a Media Partner</a>
+        
+      </div>
+    </div>
+
+    <details class="terms" style="margin-top:18px;">
+      <summary>Terms — SocialTap Media Partner Program — Terms & Conditions (click to expand)</summary>
+      <pre>
+SocialTap Media Partner Program — Terms & Conditions
+
+Effective Date: 7/30/2026
+
+1. Eligibility
+	•	The SocialTap Media Partner Program (“Program”) is open to all users aged 13 and above.
+	•	Users under the age of 18 may participate with the understanding that no monetary compensation or products of value are provided.
+	•	Users must have at least 500 followers on a social platform to qualify.
+
+2. Nature of the Program
+	•	The Program is a recognition-based initiative.
+	•	Participants may receive up to five (5) virtual badge tiers displayed on their SocialTap profile.
+	•	These badges are purely virtual symbols of recognition and carry no monetary value, rights, or compensation.
+
+3. Partner Responsibilities
+	•	Partners are encouraged to positively promote SocialTap on their social platforms.
+	•	If posting about SocialTap, Partners must follow applicable advertising and disclosure guidelines, including using clear tags such as “#SocialTapPartner” where required.
+	•	Partners must comply with the SocialTap Community Guidelines and Terms of Service.
+
+4. Restrictions
+	•	Badges may not be sold, transferred, or exchanged.
+	•	Misuse of the Program, including misleading promotions or violating platform rules, may result in removal from the Program.
+
+5. Termination
+	•	SocialTap reserves the right to suspend or terminate a participant’s status in the Program at any time, for any reason.
+
+6. Disclaimer
+	•	Participation in this Program does not create an employment, agency, or sponsorship relationship between you and SocialTap.
+	•	The Program is voluntary and intended solely for recognition within the SocialTap platform.
+      </pre>
+    </details>
+
+
+  </div>
+</body>
+</html>
