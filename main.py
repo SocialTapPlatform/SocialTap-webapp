@@ -1156,4 +1156,4 @@ def mediajoin():
 
 @app.route('/mpartners/test')
 def mediatest():
-    return render_template('mpartners/test.html')
+    return render_template('mpartners/redirecting.html')
