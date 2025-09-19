@@ -11,7 +11,7 @@
     /* General dark theme */
     body { background: #000; color: #fff }
     .card { background: #111; border: none }
-    .form-control, .btn, .list-group-item { background: #1a1a1a; color: #fff; border: 1px solid #333 }
+    .form-control, .btn, .list-group-item, .modal-content { background: #1a1a1a; color: #fff; border: 1px solid #333 }
     .list-group-item:hover { background: #222 }
     
     /* Chat message area */
@@ -54,11 +54,12 @@
           <h5 class="mb-0" id="chatTitle">Chat</h5>
           <div class="d-flex gap-2 align-items-center">
             <span class="badge bg-success">{{ username }}</span>
-            <a href="{{ url_for('profile') }}" class="btn btn-sm btn-outline-secondary btn-circle"><i class="bi bi-person"></i></a>
+            <button id="inviteBtn" class="btn btn-sm btn-outline-info btn-circle d-none" title="Invite to Group"><i class="bi bi-person-plus"></i></button>
+            <a href="{{ url_for('profile') }}" class="btn btn-sm btn-outline-secondary btn-circle" title="Profile"><i class="bi bi-person"></i></a>
             {% if current_user.is_admin() %}
-            <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-outline-primary btn-circle"><i class="bi bi-shield-lock"></i></a>
+            <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-outline-primary btn-circle" title="Admin Panel"><i class="bi bi-shield-lock"></i></a>
             {% endif %}
-            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger btn-circle"><i class="bi bi-box-arrow-right"></i></a>
+            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger btn-circle" title="Logout"><i class="bi bi-box-arrow-right"></i></a>
             <button id="soundToggle" class="btn btn-sm btn-outline-secondary">Sound: <span id="soundStatus">On</span></button>
           </div>
         </div>
@@ -79,6 +80,26 @@
   </div>
 </div>
 
+<div class="modal fade" id="inviteModal" tabindex="-1" aria-labelledby="inviteModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="inviteModalLabel">Generate Invite Link</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Share this link to invite others to the group. The link will expire at the start of next month.</p>
+        <div class="input-group">
+          <input type="text" class="form-control" id="inviteLinkInput" readonly>
+          <button class="btn btn-outline-secondary" id="copyInviteLinkBtn">Copy</button>
+        </div>
+        <div id="inviteStatus" class="mt-2"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <audio id="notifSound" src="/static/sounds/notification.mp3" preload="auto"></audio>
 <input type="hidden" id="activeChatId" value="{{ active_chat_id if active_chat_id is not none else '' }}">
 
@@ -98,6 +119,8 @@ let chatId     = document.getElementById('activeChatId').value === '' ? null : N
 let lastMsgCount = 0;
 let lastMsgIds = new Set();
 let initialized = false;
+let inviteModalInstance = null;
+
 
 // Escape HTML to prevent XSS
 const esc = s => s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -133,7 +156,7 @@ async function loadChats(){
                 chatId = null;
                 titleEl.textContent = 'Global Chat';
               }
-              loadChats(); loadMessages(); loadParticipants();
+              loadChats(); loadMessages(); updateChatUI();
             } else alert(j.error || 'Error');
           });
       }
@@ -154,7 +177,7 @@ async function loadChats(){
       lastMsgCount = 0;
       lastMsgIds.clear();
       initialized = false;
-      loadMessages(); loadParticipants();
+      loadMessages(); updateChatUI();
     };
   });
 }
@@ -168,11 +191,10 @@ async function loadMessages(){
   const msgs = await api(url);
   const ids = msgs.map(m => m.id);
   const diff = msgs.length !== lastMsgCount || ids.some(id => !lastMsgIds.has(id));
-  if (!diff) return;
+  if (!diff && initialized) return;
 
   box.innerHTML = '';
   msgs.forEach(m => {
-    // Render badges as small inline spans
     let badgesHtml = '';
     if (Array.isArray(m.badges) && m.badges.length > 0) {
       badgesHtml = m.badges.map(b => {
@@ -183,7 +205,6 @@ async function loadMessages(){
             return `<span class="badge badge-message" style="background-color: #${colorCode};">${esc(badgeText)}</span>`;
           }
         }
-        // Fallback to default badge style
         return `<span class="badge bg-info badge-message">${esc(b)}</span>`;
       }).join(' ');
     }
@@ -192,15 +213,17 @@ async function loadMessages(){
       <div class="bubble-wrap ${m.username === me ? 'own' : 'other'}">
         <div class="message-bubble">${esc(m.content)}</div>
         <div class="message-meta">${esc(m.username)} ${badgesHtml}</div>
-        ${isAdmin ? `<form method="POST" action="/admin/delete-message/${m.id}" class="d-inline">
+        ${isAdmin ? `<form method="POST" action="/admin/delete-message/${m.id}" class="d-inline" onsubmit="return confirm('Delete this message?')">
           <button class="btn btn-sm btn-outline-danger mt-1"><i class="bi bi-trash"></i></button>
         </form>` : ''}
       </div>`);
   });
 
-  box.scrollTop = box.scrollHeight;
-
-  if (initialized && soundOn && msgs.length > lastMsgCount && msgs[msgs.length - 1].username !== me) {
+  if (!initialized || diff) {
+    box.scrollTop = box.scrollHeight;
+  }
+  
+  if (initialized && soundOn && msgs.length > lastMsgCount && msgs.length > 0 && msgs[msgs.length - 1].username !== me) {
     notifSound.play().catch(() => {});
   }
 
@@ -210,49 +233,22 @@ async function loadMessages(){
 }
 
 // -----------------------------
-// Load participants for group chats
+// Update Chat UI (Invite Button and Participants)
 // -----------------------------
-async function loadParticipants() {
-  const box = document.getElementById('participantBox');
-  if (chatId === null) {
-    box.innerHTML = '';
-    return;
-  }
+function updateChatUI() {
+    const inviteBtn = document.getElementById('inviteBtn');
+    const participantBox = document.getElementById('participantBox');
 
-  const res = await fetch(`/api/chat/${chatId}`);
-  const data = await res.json();
-  if (!data.participants) return;
+    participantBox.innerHTML = ''; // Clear participants on chat switch
 
-  const isOwner = data.participants.length > 0 && data.participants[0].id === meId;
-  if (!isOwner) {
-    box.innerHTML = '';
-    return;
-  }
-
-  box.innerHTML = `<strong>Group Members:</strong><ul class="list-unstyled">` + 
-    data.participants.map(p => {
-      if (p.id === meId) return `<li>${esc(p.username)} (You)</li>`;
-      return `<li>${esc(p.username)} <button class="btn btn-sm btn-outline-danger btn-circle ms-1" onclick="removeMember(${p.id})"><i class="bi bi-x-lg"></i></button></li>`;
-    }).join('') + `</ul>`;
+    if (chatId !== null && chatId !== 0) {
+        inviteBtn.classList.remove('d-none');
+        // You can also fetch and display participants here if needed
+    } else {
+        inviteBtn.classList.add('d-none');
+    }
 }
 
-// -----------------------------
-// Remove a member
-// -----------------------------
-async function removeMember(userId) {
-  if (!confirm("Remove this user from the chat?")) return;
-  const res = await fetch(`/api/chat/${chatId}/remove/${userId}`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'}
-  });
-  const data = await res.json();
-  if (data.success) {
-    alert(data.message);
-    loadParticipants();
-  } else {
-    alert(data.error || 'Error removing user');
-  }
-}
 
 // -----------------------------
 // Send message
@@ -263,16 +259,16 @@ document.getElementById('messageForm').addEventListener('submit', async e => {
   const text = inp.value.trim();
   if (!text) return;
   const fd = new FormData();
-  fd.append('chat_id', chatId === null ? 0 : chatId);
+  // Ensure chat_id is never null, use 0 for global
+  fd.append('chat_id', chatId === null ? '0' : chatId);
   fd.append('message', text);
   try {
     const res = await fetch('/send', { method: 'POST', body: fd });
     const j = await res.json();
     if (res.ok && j.success) {
       inp.value = '';
-      lastMsgCount = 0;
-      initialized = true;
-      loadMessages(); loadParticipants();
+      initialized = false; // Force a full redraw
+      loadMessages();
     } else {
       alert(j.error || 'Send failed');
     }
@@ -292,11 +288,58 @@ document.getElementById('soundToggle').onclick = () => {
 };
 
 // -----------------------------
+// Invite Logic
+// -----------------------------
+document.getElementById('inviteBtn').addEventListener('click', async () => {
+    if (!chatId) return;
+
+    const modalEl = document.getElementById('inviteModal');
+    if (!inviteModalInstance) {
+        inviteModalInstance = new bootstrap.Modal(modalEl);
+    }
+
+    const inputEl = document.getElementById('inviteLinkInput');
+    const statusEl = document.getElementById('inviteStatus');
+    inputEl.value = 'Generating...';
+    statusEl.textContent = '';
+    
+    inviteModalInstance.show();
+
+    try {
+        const res = await fetch(`/api/chat/${chatId}/invite`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            inputEl.value = data.invite_link;
+        } else {
+            inputEl.value = 'Failed to generate link.';
+            statusEl.textContent = data.error || 'An unknown error occurred.';
+            statusEl.classList.add('text-danger');
+        }
+    } catch (err) {
+        inputEl.value = 'Error.';
+        statusEl.textContent = 'Network error. Could not generate invite link.';
+        statusEl.classList.add('text-danger');
+    }
+});
+
+document.getElementById('copyInviteLinkBtn').addEventListener('click', () => {
+    const inputEl = document.getElementById('inviteLinkInput');
+    navigator.clipboard.writeText(inputEl.value).then(() => {
+        alert('Copied to clipboard!');
+    }, () => {
+        alert('Failed to copy.');
+    });
+});
+
+
+// -----------------------------
 // Initialize
 // -----------------------------
-loadChats(); loadMessages(); loadParticipants();
+loadChats();
+loadMessages();
+updateChatUI();
 setInterval(loadChats, 5000);
-setInterval(() => { loadMessages(); loadParticipants(); }, 1000);
+setInterval(loadMessages, 1000);
 
 // -----------------------------
 // Handle back/forward navigation
@@ -304,7 +347,10 @@ setInterval(() => { loadMessages(); loadParticipants(); }, 1000);
 window.addEventListener('popstate', () => {
   const path = location.pathname;
   const newId = path.startsWith('/chat/') ? Number(path.split('/').pop()) : null;
-  document.querySelector(`a.chat-link[data-id="${newId === null ? 'global' : newId}"]`)?.click();
+  const linkToClick = document.querySelector(`a.chat-link[data-id="${newId === null ? 'global' : newId}"]`);
+  if(linkToClick) {
+      linkToClick.click();
+  }
 });
 </script>
 
