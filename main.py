@@ -55,20 +55,29 @@ def redirect_to_custom_domain():
     if request.host == "socialtap-webapp.onrender.com":
         return redirect("https://socialtap.social/updateapp", code=301)
 
+from flask import request, redirect, url_for
+
 @app.before_request
 def countdown_check():
     if current_user.is_authenticated and current_user.is_admin():
         return
-
-    # Define pages that everyone should be able to access 
-    allowed_endpoints = [
+    allowed_endpoints = {
         'login',
-        'static',    
-        'countdown',    
-        'idkwhatoputhereeither'
-    ]
-    if request.endpoint not in allowed_endpoints:
-        return redirect(url_for('countdown'))
+        'static',  
+        'countdown',
+    }
+
+    # 1. If the URL didn’t match a route, let Flask raise its own 404
+    if request.endpoint is None:
+        return
+
+    # 2. If the matched endpoint is in the whitelist, do nothing
+    if request.endpoint in allowed_endpoints:
+        return
+
+    # 3. Anything else → redirect to the countdown page
+    return redirect(url_for('countdown'))
+
 
 @app.before_request
 def check_if_banned():
